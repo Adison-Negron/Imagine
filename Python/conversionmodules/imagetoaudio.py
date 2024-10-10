@@ -136,7 +136,7 @@ def generate_audio_1(rgb_dict, out_path, intensity, file_name):
                              (np.multiply(concatenated_lead_waves, weights[0])) +
                              (np.multiply(concatenated_string_waves, weights[1]) / avg_red_overall))
 
-    sample_rate = 30000
+    sample_rate = 44000
 
     # Adjust the amplitude of the combined wave
     combined_wave = combined_wave * intensity
@@ -170,7 +170,8 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
         'string': [0.3, 0.5, 0.7, 0.9, 1.1]
     }
 
-    overtones = random.randint(1,25)
+    overtones = math.floor(len(rgb_dict['1'])*.02)
+    print(overtones)
     amplitude = intensity
     frequency = 261.6 # C4
     sample_rate = 30000
@@ -189,7 +190,7 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
         case 'blue':
 
             x = math.floor(pow(green_array.shape[0], 1/3))
-            for n in range(x,green_array.shape[0]):
+            for n in range(x*3,green_array.shape[0]):
                 try:
                     reduced_green_array = np.mean(green_array.reshape(-1, math.floor(n)), axis=1)
                     factor = math.floor(n)
@@ -201,14 +202,14 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
             reduced_red_array = np.mean(red_array.reshape(-1, factor), axis=1)
             time = time[:,np.newaxis]*reduced_blue_array
             base_tone = np.sin(2 * np.pi * frequency * time*reduced_blue_array)
-            alternate_square = signal.square(2 * np.pi * frequency * time*reduced_red_array)/avg_blue_overall
-            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)/avg_blue_overall
+            alternate_square = signal.square(2 * np.pi * frequency * time*reduced_red_array)
+            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)
             blue_hash = hash(avg_blue_overall)
             seed_str = str(blue_hash)
             seed_str = seed_str.replace('0','')
 
             for letter in seed_str:
-                if letter !=1 or 0:
+                if letter !='1' or '0':
                     overtone_seed = int(letter)
                     seed_str = seed_str.replace(letter, '1')
 
@@ -223,9 +224,9 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
                     overtone_num = int(seed_str[i])
                     seed_str = seed_str.replace(str(overtone_num), '')
                     equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
                     equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
                     tones = overtone + undertone
  
                 
@@ -250,22 +251,23 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
 
             pass
 
-        case 'green':            
+        case 'green':
             x = math.floor(pow(green_array.shape[0], 1/3))
-            for n in range(x,green_array.shape[0]):
+            for n in range(x*3,green_array.shape[0]):
                 try:
                     reduced_green_array = np.mean(green_array.reshape(-1, math.floor(n)), axis=1)
                     factor = math.floor(n)
                     break
                 except:
                     continue
+            
 
             reduced_blue_array = np.mean(blue_array.reshape(-1, factor), axis=1)
             reduced_red_array = np.mean(red_array.reshape(-1, factor), axis=1)
             time = time[:,np.newaxis]*reduced_green_array
-            base_tone = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)
-            alternate_square = signal.square(2 * np.pi * frequency * time*reduced_red_array)/avg_green_overall
-            alternate_sin = np.sin (2 * np.pi * frequency * time*reduced_blue_array)/avg_green_overall
+            base_tone = signal.gausspulse(2 * np.pi * frequency * time*reduced_green_array)*.5
+            alternate_sin = np.sin(2 * np.pi * frequency * time*reduced_blue_array)
+            alternate_square = signal.square(2 * np.pi * frequency * time*reduced_red_array)
             green_hash = hash(avg_green_overall)
             seed_str = str(green_hash)
             seed_str = seed_str.replace('0','')
@@ -279,7 +281,6 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
                     
                     continue
 
-
             for i in range(overtones+1):
 
                 if seed_str !='':
@@ -287,7 +288,7 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
                     seed_str = seed_str.replace(str(overtone_num), '')
                     equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
                     overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2,-(overtone_seed*overtone_num)/12) * frequency
+                    equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
                     undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
                     tones = overtone + undertone
  
@@ -311,13 +312,10 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
 
             
             final_wave = (base_tone*alternate_square*alternate_sin)*(intensity)+final_overtone
-                
-
-            pass
 
         case 'red':
             x = math.floor(pow(green_array.shape[0], 1/3))
-            for n in range(x,green_array.shape[0]):
+            for n in range(x*3,green_array.shape[0]):
                 try:
                     reduced_green_array = np.mean(green_array.reshape(-1, math.floor(n)), axis=1)
                     factor = math.floor(n)
@@ -330,8 +328,8 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
             reduced_red_array = np.mean(red_array.reshape(-1, factor), axis=1)
             time = time[:,np.newaxis]*reduced_green_array
             base_tone = signal.square(2 * np.pi * frequency * time*reduced_red_array)
-            alternate_sin = np.sin(2 * np.pi * frequency * time*reduced_blue_array)/avg_red_overall
-            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)/avg_red_overall
+            alternate_sin = np.sin(2 * np.pi * frequency * time*reduced_blue_array)
+            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)
             red_hash = hash(avg_red_overall)
             seed_str = str(red_hash)
             seed_str = seed_str.replace('0','')
