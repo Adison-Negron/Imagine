@@ -6,6 +6,7 @@ import scipy.io
 import sys
 import random
 from scipy import signal
+import wave
 
 def convolve(img_array,out_path, kernel, step=2):
     x = img_array.shape[0]
@@ -20,8 +21,8 @@ def convolve(img_array,out_path, kernel, step=2):
 
     resultant_arr = np.array(resultant_arr)
     print(resultant_arr.shape)
-
-    return resultant_arr
+    generate_audio_nosplit(resultant_arr, out_path)
+    return
 
 # Function to ensure all arrays have the same dimension
 def ensure_same_dimension(arrays):
@@ -38,8 +39,13 @@ def ensure_same_dimension(arrays):
     
     return adjusted_arrays
     
+    # Stretch RGB data to match the length of `time`
+def stretch_to_match_length(arr, target_len):
+    return np.interp(np.linspace(0, len(arr), target_len), np.arange(len(arr)), arr)
 
-def convolve_rgb(img_array, out_path, kernel, step=2, intensity=0.9):
+
+
+def convolve_rgb(img_array, out_path, file_name,kernel, step=2, intensity=0.6):
     x = img_array.shape[0]
     y = img_array.shape[1]
 
@@ -52,7 +58,7 @@ def convolve_rgb(img_array, out_path, kernel, step=2, intensity=0.9):
     # Calculate average values for each channel
     for i in range(0, x - kernel + 1, step):
         for j in range(0, y - kernel + 1, step):
-            avg_red = (np.mean(red_values[i:i + kernel, j:j + kernel])+0.000000000001 )/ 256
+            avg_red = (np.mean(red_values[i:i + kernel, j:j + kernel])+0.000000000001) / 256
             avg_green = (np.mean(green_values[i:i + kernel, j:j + kernel])+0.000000000001) / 256
             avg_blue = (np.mean(blue_values[i:i + kernel, j:j + kernel])+0.000000000001) / 256
             
@@ -61,11 +67,11 @@ def convolve_rgb(img_array, out_path, kernel, step=2, intensity=0.9):
             rgb_dict['3'].append(avg_blue)
 
     
-    generate_audio_1(rgb_dict, out_path, intensity)
-    # generate_sound_overtones(rgb_dict, out_path, intensity,)
+    #generate_audio_1(rgb_dict, out_path, intensity, file_name)
+    generate_sound_overtones(rgb_dict, out_path, intensity,file_name)
 
 
-def generate_audio_1(rgb_dict, out_path,intensity):
+def generate_audio_1(rgb_dict, out_path, intensity, file_name):
 
     # Compute overall average for each color channel
     avg_red_overall = np.mean(rgb_dict['1'])
@@ -78,15 +84,6 @@ def generate_audio_1(rgb_dict, out_path,intensity):
                           ('blue', avg_blue_overall)], key=lambda x: x[1])[0]
     
     weights = [.5, .2, .1]
-
-    weights = {
-        'pad': [1.0, 0.6, 0.4, 0.3, 0.2],      # Mellow overtones
-        'lead': [1.0, 0.8, 0.6, 0.3, 0.1],     # Stronger overtones for a bright sound
-        'string': [1.0, 0.7, 0.5, 0.3, 0.2] # Stronger overtones for a dark sound
-    }
-
-    frequencies = {261.63,277.18,293.66,311.13,329.63,349.23,369.99,39,415.30,440,466.16,493.88}
-
 
     templates = {
         'pad': [weights[2], weights[1], weights[0]],
@@ -105,20 +102,20 @@ def generate_audio_1(rgb_dict, out_path,intensity):
     lead_waves = []
     string_waves = []
 
-    brightness = (avg_red_overall + avg_green_overall + avg_blue_overall)/3
-    
+    brightness = (avg_red_overall + avg_green_overall + avg_blue_overall) / 3
+
     for i in range(audio_divisions):
-        pad_waves.append((np.sin(np.deg2rad(subdivided_blue_array[i]))))
-        lead_waves.append((signal.square(np.deg2rad(subdivided_red_array[i])))*.2)
-        string_waves.append((signal.sawtooth(np.deg2rad(subdivided_green_array[i]))))
+        pad_waves.append((np.sin(subdivided_blue_array[i])))
+        lead_waves.append((signal.square(subdivided_red_array[i])) * .2)
+        string_waves.append((signal.sawtooth(subdivided_green_array[i])))
 
     concatenated_pad_waves = np.concatenate(pad_waves)
     concatenated_lead_waves = np.concatenate(lead_waves)
     concatenated_string_waves = np.concatenate(string_waves)
 
-    concatenated_pad_waves, concatenated_lead_waves, concatenated_string_waves = ensure_same_dimension([concatenated_pad_waves, concatenated_lead_waves, concatenated_string_waves])
+    concatenated_pad_waves, concatenated_lead_waves, concatenated_string_waves = ensure_same_dimension(
+        [concatenated_pad_waves, concatenated_lead_waves, concatenated_string_waves])
 
-    
     # Combine the waves based on the dominant color
     match dominant_color:
         case 'blue':
@@ -139,17 +136,18 @@ def generate_audio_1(rgb_dict, out_path,intensity):
 
     sample_rate = 30000
 
-    #change the amplitude of the combined wave
-    combined_wave = combined_wave*intensity
-    # Apply the intensity factor to control the output waveform amplitude
-    random_id = random.randint(0,100)
+    # Adjust the amplitude of the combined wave
+    combined_wave = combined_wave * intensity
+
     # Normalize the combined wave to the range of int16 (to avoid distortion)
-    scipy.io.wavfile.write(f"{out_path}output{random_id}-{dominant_color}.wav", sample_rate, (combined_wave * 32767).astype(np.int16))  
-    
+    output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
+    scipy.io.wavfile.write(output_file_name, sample_rate, (combined_wave * 32767).astype(np.int16))
+
+    print(f"Generated audio file: {output_file_name}")
     return combined_wave
 
 
-def generate_sound_overtones(rgb_dict, out_path, intensity):
+def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
     # Compute overall average for each color channel
     avg_red_overall = np.mean(rgb_dict['1'])
     avg_green_overall = np.mean(rgb_dict['2'])
@@ -167,60 +165,200 @@ def generate_sound_overtones(rgb_dict, out_path, intensity):
         'string': [0.3, 0.5, 0.7, 0.9, 1.1]
     }
 
-    audio_divisions = 10
-    brightness = (avg_red_overall + avg_green_overall + avg_blue_overall) / 3
-    weights_dict = {i: 1 - i/10 for i in range(1, 11)}  # Adjust weights based on division
+    overtones = random.randint(1,25)
+    amplitude = intensity
+    frequency = 261.6 #C4
+    sample_rate = 1000
+    time = np.linspace(0, 1, sample_rate)
 
-    duration = 6
-    sample_rate = 30000
-    time = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
 
-    # Initialize final sound array
-    final_sound = np.zeros(int(sample_rate * duration))
+    red_array = np.asarray(rgb_dict['1']).astype(np.float64)
+    green_array = np.asarray(rgb_dict['2']).astype(np.float64)
+    blue_array = np.asarray(rgb_dict['3']).astype(np.float64)
+    overtone_weight = 800
+    
 
+    overtone_list = []
+    
     match dominant_color:
         case 'blue':
-            weights = weights_template['pad']
-            base_freq = 440  # A4
-            base_wave = np.sin(2 * np.pi * base_freq * time)*intensity
+            time = time[:,np.newaxis]*blue_array
+            base_tone = np.sin(2 * np.pi * frequency * time*blue_array)
+            alternate_square = signal.square(2 * np.pi * frequency * time*red_array)/avg_blue_overall
+            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*green_array)/avg_blue_overall
+            blue_hash = hash(avg_blue_overall)
+            seed_str = str(blue_hash)
+            seed_str = seed_str.replace('0','')
 
-            for i in range(audio_divisions):
-                overtone_freq = base_freq * (i + 1) * (1 + brightness / 10)  # Increase overtone frequency
-                overtone_wave = np.sin(2 * np.pi * overtone_freq * time) * weights[i % len(weights)]
-                final_sound += overtone_wave * weights_dict[i + 1]  # Weight the overtone based on its index
+            for letter in seed_str:
+                if letter !=1 or 0:
+                    overtone_seed = int(letter)
+                    seed_str = seed_str.replace(letter, 1)
 
-            final_sound += base_wave
+                else:
+                    
+                    continue
+
+
+            for i in range(overtones+1):
+
+                if seed_str !='':
+                    overtone_num = int(seed_str[i])
+                    seed_str = seed_str.replace(str(overtone_num), '')
+                    equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    tones = overtone + undertone
+ 
+                
+                else:
+                    equal_temperament_frequency_overtone = pow(2, i/12) * frequency
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    equal_temperament_frequency_undertone = pow(2, -i/12) * frequency
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    tones = overtone + undertone
+
+                freq_difference = abs(equal_temperament_frequency_overtone-frequency)
+                overtone_intensity = .5/freq_difference *overtone_weight
+
+                overtone_list.append(tones*overtone_intensity)
+
+            final_overtone = np.zeros_like(time)
+            for elm in overtone_list:
+                final_overtone += elm
+
+            
+            final_wave = (base_tone*alternate_sawtooth*alternate_square)*(intensity)+final_overtone
+
+            pass
 
         case 'green':
-            weights = weights_template['lead']
-            base_freq = 440  # A4
-            base_wave = signal.sawtooth(2 * np.pi * base_freq * time)*intensity
+            time = time[:,np.newaxis]*green_array
+            base_tone = signal.sawtooth(2 * np.pi * frequency * time*green_array)
+            alternate_square = signal.square(2 * np.pi * frequency * time*red_array)/avg_green_overall
+            alternate_sawtooth = np.sin (2 * np.pi * frequency * time*green_array)/avg_green_overall
+            green_hash = hash(avg_green_overall)
+            seed_str = str(green_hash)
+            seed_str = seed_str.replace('0','')
+            
+            for letter in seed_str:
+                if letter !='1' or '0':
+                    overtone_seed = int(letter)
+                    seed_str = seed_str.replace(letter, 1)
 
-            for i in range(audio_divisions):
-                overtone_freq = base_freq * (i + 1) * (1 + brightness / 10)
-                overtone_wave = signal.sawtooth(2 * np.pi * overtone_freq * time) * weights[i % len(weights)]
-                final_sound += overtone_wave * weights_dict[i + 1]
+                else:
+                    
+                    continue
 
-            final_sound += base_wave
+
+            for i in range(overtones+1):
+
+                if seed_str !='':
+                    overtone_num = int(seed_str[i])
+                    seed_str = seed_str.replace(str(overtone_num), '')
+                    equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    equal_temperament_frequency_undertone = pow(2,-(overtone_seed*overtone_num)/12) * frequency
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    tones = overtone + undertone
+ 
+                
+                else:
+                    equal_temperament_frequency_overtone = pow(2, i/12) * frequency
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    equal_temperament_frequency_undertone = pow(2, -i/12) * frequency
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    tones = overtone + undertone
+
+                freq_difference = abs(equal_temperament_frequency_overtone-frequency)
+                overtone_intensity = .5/freq_difference *overtone_weight
+
+                overtone_list.append(tones*overtone_intensity)
+
+
+            final_overtone = np.zeros_like(time)
+            for elm in overtone_list:
+                final_overtone += elm
+
+            
+            final_wave = (base_tone*alternate_sawtooth*alternate_square)*(intensity)+final_overtone
+                
+
+            pass
 
         case 'red':
-            weights = weights_template['string']
-            base_freq = 440  # A4
-            base_wave = signal.square(2 * np.pi * base_freq * time)*intensity
+            time = time[:,np.newaxis]*blue_array
+            base_tone = signal.square(2 * np.pi * frequency * time*red_array)
+            alternate_square = np.sin(2 * np.pi * frequency * time*red_array)/avg_red_overall
+            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*green_array)/avg_red_overall
+            red_hash = hash(avg_red_overall)
+            seed_str = str(red_hash)
+            seed_str = seed_str.replace('0','')
+            
+            for letter in seed_str:
+                if letter !='1' or '0':
+                    overtone_seed = int(letter)
+                    seed_str = seed_str.replace(letter, '1')
 
-            for i in range(audio_divisions):
-                overtone_freq = base_freq * (i + 1) * (1 + brightness / 10)
-                overtone_wave = signal.square(2 * np.pi * overtone_freq * time) * weights[i % len(weights)]
-                final_sound += overtone_wave * weights_dict[i + 1]
+                else:
+                    
+                    continue
 
-            final_sound += base_wave
 
-    # Normalize the final sound to avoid clipping and apply intensity
-    final_sound = (final_sound / np.max(np.abs(final_sound))) * intensity
-    random_id = random.randint(0,100)
-    # Ensure final sound is within int16 range for WAV format
-    scipy.io.wavfile.write(f"{out_path}output{random_id}-{dominant_color}.wav", sample_rate, (final_sound * 32767).astype(np.int16))
+            for i in range(overtones+1):
 
+                if seed_str !='':
+                    overtone_num = int(seed_str[i])
+                    seed_str = seed_str.replace(str(overtone_num), '')
+                    equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    tones = overtone + undertone
+ 
+                
+                else:
+                    equal_temperament_frequency_overtone = pow(2, i/12) * frequency
+                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*blue_array)
+                    equal_temperament_frequency_undertone = pow(2, -i/12) * frequency
+                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*blue_array)
+                    tones = overtone + undertone
+
+                freq_difference = abs(equal_temperament_frequency_overtone-frequency)
+                overtone_intensity = .5/freq_difference *overtone_weight
+
+                overtone_list.append(tones*overtone_intensity)
+
+
+            final_overtone = np.zeros_like(time)
+            for elm in overtone_list:
+                final_overtone += elm
+
+            
+            final_wave = (base_tone*alternate_sawtooth*alternate_square)*(intensity)+final_overtone
+
+
+
+    # Normalize final_wave to be within the range [-1, 1]
+    max_wave_value = np.max(np.abs(final_wave))  # Find the maximum absolute value in final_wave
+    if max_wave_value > 0:
+        final_wave /= max_wave_value  # Normalize the wave
+
+    # Scale to int16 range and clip to avoid overflow
+    final_sound = (final_wave * 32767)
+    final_sound_int16 = np.clip(final_sound, -32768, 32767).astype(np.int16)
+
+    # Write the sound to a .wav file
+    random_id = random.randint(0, 1000)
+    # scipy.io.wavfile.write(f"{out_path}output{random_id}-{dominant_color}.wav", sample_rate, final_sound_int16)
+    with wave.open(f"{out_path}{file_name}-output{random_id}-{dominant_color}.wav", "w") as f:
+        # 2 Channels.
+        f.setnchannels(1)
+        # 2 bytes per sample.
+        f.setsampwidth(2)
+        f.setframerate(sample_rate)
+        f.writeframes(final_sound_int16.tobytes())
 
 def generate_audio_nosplit(arrays, out_path):
     sample_rate = 44800
@@ -261,22 +399,32 @@ def generate_audio_nosplit(arrays, out_path):
 
 def imagetoaudio(img_path, out_path, kernel_size, step_size):
     Images = []
+    file_names = []
+    
+    # Iterate over all .jpg files in the specified directory
     for file in glob.glob(img_path + "*.jpg"):
+        # Extract the file name without extension
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_names.append(file_name)
+        
+        # Open and process the image
         img = Image.open(file)
         img = img.convert('RGB')
         width, height = img.size
         aspect_ratio = width / height
-
         img = img.resize((int(aspect_ratio * 1024), 1024))  # Resize with consistent height
         img_array = np.asarray(img)
 
         Images.append(img_array)
-        print(img_array.shape)
+        print(f"Processing image: {file_name}, Shape: {img_array.shape}")
 
-    convolution_results = []
+    # Pass the image file name along with the image array
     for i in range(len(Images)):
-        print("Convolving image " + str(i) + " with Kernel Size " + str(kernel_size) + " and Step Size " + str(step_size))
-        convolve_rgb(Images[i], out_path, kernel_size, step_size)
+        print(f"Convolving image {file_names[i]} with Kernel Size {kernel_size} and Step Size {step_size}")
+        convolve_rgb(Images[i], out_path,file_names[i], kernel_size, step_size, )
+
+    print("Finished")
+        #convolve(Images[i], out_path, kernel_size, step_size)
         # convolution_results.append(results)
 
 
@@ -311,7 +459,7 @@ if __name__ == "__main__":
     else:
         img_path = os.getcwd() + "/imgs/"
         out_path = os.getcwd() + "/output/"
-        kernel_size = 10
+        kernel_size = 20
         step_size = 3
         imagetoaudio(img_path, out_path, kernel_size, step_size)
 
