@@ -26,28 +26,8 @@ def convolve(img_array,out_path, kernel, step=2):
     generate_audio_nosplit(resultant_arr, out_path)
     return
 
-# Function to ensure all arrays have the same dimension
-def ensure_same_dimension(arrays):
-    # Find maximum size
-    max_size = max(arr.shape[0] for arr in arrays)
-    
-    # Pad or truncate arrays to the same size
-    adjusted_arrays = []
-    for arr in arrays:
-        if arr.shape[0] < max_size:
-            adjusted_arrays.append(np.pad(arr, (0, max_size - arr.shape[0]), mode='constant'))
-        else:
-            adjusted_arrays.append(arr[:max_size])  # Truncate if larger
-    
-    return adjusted_arrays
-    
-    # Stretch RGB data to match the length of `time`
-def stretch_to_match_length(arr, target_len):
-    return np.interp(np.linspace(0, len(arr), target_len), np.arange(len(arr)), arr)
 
-
-
-def convolve_rgb(img_array, out_path, file_name,kernel, step=2, intensity=0.6):
+def convolve_rgb(img_array,kernel, step=2):
     x = img_array.shape[0]
     y = img_array.shape[1]
 
@@ -69,8 +49,8 @@ def convolve_rgb(img_array, out_path, file_name,kernel, step=2, intensity=0.6):
             rgb_dict['3'].append(avg_blue)
 
     
-    #generate_audio_1(rgb_dict, out_path, intensity, file_name)
-    generate_sound_overtones(rgb_dict, out_path, intensity,file_name)
+    
+    return rgb_dict
 
 
 def generate_audio_1(rgb_dict, out_path, intensity, file_name):
@@ -150,10 +130,47 @@ def generate_audio_1(rgb_dict, out_path, intensity, file_name):
 
 
 
+def interpolate_rgb_array(array, target_length):
+    return np.interp(np.linspace(0, len(array) - 1, target_length), 
+                     np.arange(len(array)), array)
 
+# Function to modulate the frequency with options for wave type and control over modulation parameters
+def modulate_frequency(wave_type, base_time, array, base_frequency, 
+                       modulation_duration=6, modulation_intensity=0.4, envelope_intensity=1.0,intensity = .8):
+    """
+    wave_type: 'sine', 'square', 'triangle'
+    base_time: the time array
+    array: the interpolated RGB array for modulation
+    base_frequency: the base frequency (e.g., 261.6 for C4)
+    modulation_duration: how long the modulation lasts before fading out
+    modulation_intensity: how strong the modulation is applied
+    envelope_intensity: intensity of the fade-out over time (0 = immediate stop, 1 = full duration)
+    """
 
-def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
-    # Compute overall average for each color channel
+    # Apply a smoothing window to prevent drastic changes in the modulated frequency
+    smooth_rgb = np.convolve(array, np.ones(50) / 50, mode='same')  # Smooth over 50 samples
+
+    # Normalize smoothed RGB values to a modulation factor range
+    modulated_frequency = base_frequency + (smooth_rgb - np.mean(smooth_rgb)) * modulation_intensity
+
+    # Create a linear fade-out envelope for the modulation after 'modulation_duration' seconds
+    fade_time = np.minimum(base_time / modulation_duration, 1)  # From 1 (full intensity) to 0 (no intensity)
+    modulation_envelope = (1 - fade_time) * envelope_intensity  # Decreases from 1 to 0 over time, scaled by envelope_intensity
+
+    # Apply modulation based on wave type
+    match wave_type: 
+        case 'sine':
+            modulated_wave = np.sin(2 * np.pi * modulated_frequency * base_time) * modulation_envelope
+        case 'saw':
+            modulated_wave = signal.sawtooth(2 * np.pi * modulated_frequency * base_time) * modulation_envelope
+        case 'square':
+            modulated_wave = signal.square(2 * np.pi * modulated_frequency * base_time) * modulation_envelope
+
+    return modulated_wave * intensity  # Adjust overall wave amplitude
+
+# Main sound generation function
+def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44100):
+    # Average RGB values
     avg_red_overall = np.mean(rgb_dict['1'])
     avg_green_overall = np.mean(rgb_dict['2'])
     avg_blue_overall = np.mean(rgb_dict['3'])
@@ -163,240 +180,40 @@ def generate_sound_overtones(rgb_dict, out_path, intensity,file_name):
                           ('green', avg_green_overall), 
                           ('blue', avg_blue_overall)], key=lambda x: x[1])[0]
 
-    # Define weight templates for different sound types
-    weights_template = {
-        'pad': [0.1, 0.2, 0.3, 0.4, 0.5],
-        'lead': [0.2, 0.4, 0.6, 0.8, 1.0],
-        'string': [0.3, 0.5, 0.7, 0.9, 1.1]
-    }
+    # Set frequency for C4 tone (~261.6 Hz)
+    base_frequency = 261.6
+    duration = 5  # Duration of the sound in seconds
 
-    overtones = math.floor(len(rgb_dict['1'])*.02)
-    print(overtones)
-    amplitude = intensity
-    frequency = 261.6 # C4
-    sample_rate = 30000
-    time = np.linspace(0, 1, sample_rate)
+    # Create a time array
+    time = np.arange(0, duration, 1/sample_rate)
 
-
-    red_array = np.asarray(rgb_dict['1']).astype(np.float64)
-    green_array = np.asarray(rgb_dict['2']).astype(np.float64)
-    blue_array = np.asarray(rgb_dict['3']).astype(np.float64)
-    overtone_weight = 800
+    # Interpolate RGB array to match the time array length
+    interpolate_red = interpolate_rgb_array(rgb_dict['1'], len(time))
+    interpolate_green = interpolate_rgb_array(rgb_dict['2'], len(time))
+    interpolate_blue = interpolate_rgb_array(rgb_dict['3'], len(time))
     
 
-    overtone_list = []
-    
-    match dominant_color:
-        case 'blue':
+    # Select the channel based on dominant color and apply modulation
+    if dominant_color == 'red':
+        combined_wave = modulate_frequency('square', time, interpolate_red, base_frequency, 
+                                           modulation_duration=6, modulation_intensity=0.4, envelope_intensity=0.8,intensity = .3) * level
+    elif dominant_color == 'green':
+        combined_wave = modulate_frequency('saw', time, interpolate_green, base_frequency, 
+                                           modulation_duration=5, modulation_intensity=0.6, envelope_intensity=0.7,intensity = .5) * level
+    else:  # 'blue'
+        combined_wave = modulate_frequency('sine', time, interpolate_blue, base_frequency, 
+                                           modulation_duration=4, modulation_intensity=0.6, envelope_intensity=1.0,intensity = .5) * level
 
-            x = math.floor(pow(green_array.shape[0], 1/3))
-            for n in range(x*3,green_array.shape[0]):
-                try:
-                    reduced_green_array = np.mean(green_array.reshape(-1, math.floor(n)), axis=1)
-                    factor = math.floor(n)
-                    break
-                except:
-                    continue
+    # Normalize the combined wave to the range of int16 (to avoid distortion)
+    combined_wave = combined_wave * level
+    combined_wave = (combined_wave * 32767).astype(np.int16)
 
-            reduced_blue_array = np.mean(blue_array.reshape(-1, factor), axis=1)
-            reduced_red_array = np.mean(red_array.reshape(-1, factor), axis=1)
-            time = time[:,np.newaxis]*reduced_blue_array
-            base_tone = np.sin(2 * np.pi * frequency * time*reduced_blue_array)
-            alternate_square = signal.square(2 * np.pi * frequency * time*reduced_red_array)
-            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)
-            blue_hash = hash(avg_blue_overall)
-            seed_str = str(blue_hash)
-            seed_str = seed_str.replace('0','')
+    # Write the output to a WAV file
+    output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
+    scipy.io.wavfile.write(output_file_name, sample_rate, combined_wave)
 
-            for letter in seed_str:
-                if letter !='1' or '0':
-                    overtone_seed = int(letter)
-                    seed_str = seed_str.replace(letter, '1')
+    return {'sound':combined_wave, 'dominant_color':dominant_color, 'time':time, "rgb_arrays": np.asarray[interpolate_red, interpolate_green, interpolate_blue],'rgb_dictionary':rgb_dict}
 
-                else:
-                    
-                    continue
-
-
-            for i in range(overtones+1):
-
-                if seed_str !='':
-                    overtone_num = int(seed_str[i])
-                    seed_str = seed_str.replace(str(overtone_num), '')
-                    equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
-                    tones = overtone + undertone
- 
-                
-                else:
-                    equal_temperament_frequency_overtone = pow(2, i/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2, -i/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
-                    tones = overtone + undertone
-
-                freq_difference = abs(equal_temperament_frequency_overtone-frequency)
-                overtone_intensity = .5/freq_difference *overtone_weight
-
-                overtone_list.append(tones*overtone_intensity)
-
-            final_overtone = np.zeros_like(time)
-            for elm in overtone_list:
-                final_overtone += elm
-
-            
-            final_wave = (base_tone*alternate_sawtooth*alternate_square)*(intensity)+final_overtone
-
-            pass
-
-        case 'green':
-            x = math.floor(pow(green_array.shape[0], 1/3))
-            for n in range(x*3,green_array.shape[0]):
-                try:
-                    reduced_green_array = np.mean(green_array.reshape(-1, math.floor(n)), axis=1)
-                    factor = math.floor(n)
-                    break
-                except:
-                    continue
-            
-
-            reduced_blue_array = np.mean(blue_array.reshape(-1, factor), axis=1)
-            reduced_red_array = np.mean(red_array.reshape(-1, factor), axis=1)
-            time = time[:,np.newaxis]*reduced_green_array
-            base_tone = signal.gausspulse(2 * np.pi * frequency * time*reduced_green_array)*.5
-            alternate_sin = np.sin(2 * np.pi * frequency * time*reduced_blue_array)
-            alternate_square = signal.square(2 * np.pi * frequency * time*reduced_red_array)
-            green_hash = hash(avg_green_overall)
-            seed_str = str(green_hash)
-            seed_str = seed_str.replace('0','')
-            
-            for letter in seed_str:
-                if letter !='1' or '0':
-                    overtone_seed = int(letter)
-                    seed_str = seed_str.replace(letter, '1')
-
-                else:
-                    
-                    continue
-
-            for i in range(overtones+1):
-
-                if seed_str !='':
-                    overtone_num = int(seed_str[i])
-                    seed_str = seed_str.replace(str(overtone_num), '')
-                    equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
-                    tones = overtone + undertone
- 
-                
-                else:
-                    equal_temperament_frequency_overtone = pow(2, i/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2, -i/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
-                    tones = overtone + undertone
-
-                freq_difference = abs(equal_temperament_frequency_overtone-frequency)
-                overtone_intensity = .5/freq_difference *overtone_weight
-
-                overtone_list.append(tones*overtone_intensity)
-
-
-            final_overtone = np.zeros_like(time)
-            for elm in overtone_list:
-                final_overtone += elm
-
-            
-            final_wave = (base_tone*alternate_square*alternate_sin)*(intensity)+final_overtone
-
-        case 'red':
-            x = math.floor(pow(green_array.shape[0], 1/3))
-            for n in range(x*3,green_array.shape[0]):
-                try:
-                    reduced_green_array = np.mean(green_array.reshape(-1, math.floor(n)), axis=1)
-                    factor = math.floor(n)
-                    break
-                except:
-                    continue
-            
-
-            reduced_blue_array = np.mean(blue_array.reshape(-1, factor), axis=1)
-            reduced_red_array = np.mean(red_array.reshape(-1, factor), axis=1)
-            time = time[:,np.newaxis]*reduced_green_array
-            base_tone = signal.square(2 * np.pi * frequency * time*reduced_red_array)
-            alternate_sin = np.sin(2 * np.pi * frequency * time*reduced_blue_array)
-            alternate_sawtooth = signal.sawtooth(2 * np.pi * frequency * time*reduced_green_array)
-            red_hash = hash(avg_red_overall)
-            seed_str = str(red_hash)
-            seed_str = seed_str.replace('0','')
-            
-            for letter in seed_str:
-                if letter !='1' or '0':
-                    overtone_seed = int(letter)
-                    seed_str = seed_str.replace(letter, '1')
-
-                else:
-                    
-                    continue
-
-
-            for i in range(overtones+1):
-
-                if seed_str !='':
-                    overtone_num = int(seed_str[i])
-                    seed_str = seed_str.replace(str(overtone_num), '')
-                    equal_temperament_frequency_overtone = pow(2, (overtone_seed*overtone_num)/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2, -(overtone_seed*overtone_num)/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
-                    tones = overtone + undertone
- 
-                
-                else:
-                    equal_temperament_frequency_overtone = pow(2, i/12) * frequency
-                    overtone = np.sin(2 * np.pi * equal_temperament_frequency_overtone * time*reduced_blue_array)
-                    equal_temperament_frequency_undertone = pow(2, -i/12) * frequency
-                    undertone = np.sin(2 * np.pi * equal_temperament_frequency_undertone * time*reduced_blue_array)
-                    tones = overtone + undertone
-
-                freq_difference = abs(equal_temperament_frequency_overtone-frequency)
-                overtone_intensity = .5/freq_difference *overtone_weight
-
-                overtone_list.append(tones*overtone_intensity)
-
-
-            final_overtone = np.zeros_like(time)
-            for elm in overtone_list:
-                final_overtone += elm
-
-            
-            final_wave = (base_tone*alternate_sawtooth*alternate_sin)*(intensity)+final_overtone
-
-
-
-    # Normalize final_wave to be within the range [-1, 1]
-    max_wave_value = np.max(np.abs(final_wave))  # Find the maximum absolute value in final_wave
-    if max_wave_value > 0:
-        final_wave /= max_wave_value  # Normalize the wave
-
-    # Scale to int16 range and clip to avoid overflow
-    final_sound = (final_wave * 32767)
-    final_sound_int16 = np.clip(final_sound, -32768, 32767).astype(np.int16)
-
-    # Write the sound to a .wav file
-    random_id = random.randint(0, 1000)
-    # scipy.io.wavfile.write(f"{out_path}output{random_id}-{dominant_color}.wav", sample_rate, final_sound_int16)
-    with wave.open(f"{out_path}{file_name}-output{random_id}-{dominant_color}.wav", "w") as f:
-        # 2 Channels.
-        f.setnchannels(1)
-        # 2 bytes per sample.
-        f.setsampwidth(2)
-        f.setframerate(sample_rate)
-        f.writeframes(final_sound_int16.tobytes())
 
 def generate_audio_nosplit(arrays, out_path):
     sample_rate = 44800
@@ -459,7 +276,12 @@ def imagetoaudio(img_path, out_path, kernel_size, step_size):
     # Pass the image file name along with the image array
     for i in range(len(Images)):
         print(f"Convolving image {file_names[i]} with Kernel Size {kernel_size} and Step Size {step_size}")
-        convolve_rgb(Images[i], out_path,file_names[i], kernel_size, step_size, )
+        rgb_dict = convolve_rgb(Images[i], kernel_size, step_size, )  
+        generate_sound_v3(rgb_dict=rgb_dict, out_path=out_path, level=.9, file_name=file_names[i],sample_rate=44100)
+        #generate_audio_1(rgb_dict=rgb_dict,out_path=out_path, intensity=.9, file_name=file_names[i])
+              
+
+
 
     print("Finished")
         #convolve(Images[i], out_path, kernel_size, step_size)

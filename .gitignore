@@ -366,3 +366,4 @@ env/
 imgs/
 output/
 imagetoaudio_sandbox.py
+temp.py
