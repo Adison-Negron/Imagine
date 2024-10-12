@@ -206,13 +206,49 @@ def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44100):
 
     # Normalize the combined wave to the range of int16 (to avoid distortion)
     combined_wave = combined_wave * level
+
+
+    # Apply overtones
+
+
+
+
+    # Apply LFO
+    combined_wave = apply_lfo(combined_wave, avg_red_overall, 'sine', 3, time, interpolate_red, interpolate_green, interpolate_blue)
+    #combined_wave = apply_lfo(combined_wave, avg_red_overall, 'sawtooth', 3, time, interpolate_red, interpolate_green, interpolate_blue)
+
+
     combined_wave = (combined_wave * 32767).astype(np.int16)
 
     # Write the output to a WAV file
     output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
     scipy.io.wavfile.write(output_file_name, sample_rate, combined_wave)
 
-    return {'sound':combined_wave, 'dominant_color':dominant_color, 'time':time, "rgb_arrays": np.asarray[interpolate_red, interpolate_green, interpolate_blue],'rgb_dictionary':rgb_dict}
+    #return {'sound':combined_wave, 'dominant_color':dominant_color, 'time':time, "rgb_arrays": np.asarray[interpolate_red, interpolate_green, interpolate_blue],'rgb_dictionary':rgb_dict}
+
+
+
+
+def apply_lfo(sound, color_avg, type, variance, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_f=1, scalar_a=1):
+    lfo_frequency = (np.mod((variance * color_avg) + 3,30) + 1) * scalar_f
+    if type == 'sine':
+        lfo = (interpolate_blue * scalar_a) * np.sin(2 * np.pi * lfo_frequency * time) * intensity
+    elif type == 'square':
+        lfo = (interpolate_red * scalar_a) * signal.square(2 * np.pi * lfo_frequency * time) * intensity
+    elif type == 'sawtooth':
+        lfo = (interpolate_green * scalar_a) * signal.sawtooth(2 * np.pi * lfo_frequency * time) * intensity
+
+    return multiply_wave(lfo,sound)
+
+
+def multiply_wave(wave, second_wave):
+    return wave * second_wave
+
+
+def apply_overtones(sound, sample_rate):
+
+
+    pass
 
 
 def generate_audio_nosplit(arrays, out_path):
@@ -255,7 +291,20 @@ def generate_audio_nosplit(arrays, out_path):
 def imagetoaudio(img_path, out_path, kernel_size, step_size):
     Images = []
     file_names = []
+    rerun = False
+    if not os.path.isdir(out_path):
+        rerun = True
+        os.makedirs(out_path)
+
     
+    if not os.path.isdir(img_path):
+        os.makedirs(img_path)
+        rerun = True
+
+    if rerun:
+        print("Error: First run detected, paths created,restart needed")
+        exit()
+        
     # Iterate over all .jpg files in the specified directory
     for file in glob.glob(img_path + "*.jpg"):
         # Extract the file name without extension
