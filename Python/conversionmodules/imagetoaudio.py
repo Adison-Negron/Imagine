@@ -8,7 +8,7 @@ import random
 from scipy import signal
 import wave
 import math
-
+import hashlib
 
 def convolve(img_array,out_path, kernel, step=2):
     x = img_array.shape[0]
@@ -52,6 +52,23 @@ def convolve_rgb(img_array,kernel, step=2):
     
     return rgb_dict
 
+def brightness(rgb):
+    return np.mean(rgb)
+
+# Function to ensure all arrays have the same dimension
+def ensure_same_dimension(arrays):
+    # Find maximum size
+    max_size = max(arr.shape[0] for arr in arrays)
+    
+    # Pad or truncate arrays to the same size
+    adjusted_arrays = []
+    for arr in arrays:
+        if arr.shape[0] < max_size:
+            adjusted_arrays.append(np.pad(arr, (0, max_size - arr.shape[0]), mode='constant'))
+        else:
+            adjusted_arrays.append(arr[:max_size])  # Truncate if larger
+    
+    return adjusted_arrays
 
 def generate_audio_1(rgb_dict, out_path, intensity, file_name):
 
@@ -87,9 +104,9 @@ def generate_audio_1(rgb_dict, out_path, intensity, file_name):
     brightness = (avg_red_overall + avg_green_overall + avg_blue_overall) / 3
 
     for i in range(audio_divisions):
-        pad_waves.append((np.sin(subdivided_blue_array[i])))
-        lead_waves.append((signal.square(subdivided_red_array[i])) * .2)
-        string_waves.append((signal.sawtooth(subdivided_green_array[i])))
+        pad_waves.append((np.sin(np.deg2rad(subdivided_blue_array[i]))))
+        lead_waves.append((signal.square(np.deg2rad(subdivided_red_array[i])))*.2)
+        string_waves.append((signal.sawtooth(np.deg2rad(subdivided_green_array[i]))))
 
     concatenated_pad_waves = np.concatenate(pad_waves)
     concatenated_lead_waves = np.concatenate(lead_waves)
@@ -116,7 +133,7 @@ def generate_audio_1(rgb_dict, out_path, intensity, file_name):
                              (np.multiply(concatenated_lead_waves, weights[0])) +
                              (np.multiply(concatenated_string_waves, weights[1]) / avg_red_overall))
 
-    sample_rate = 44000
+    sample_rate = 30000
 
     # Adjust the amplitude of the combined wave
     combined_wave = combined_wave * intensity
@@ -169,7 +186,7 @@ def modulate_frequency(wave_type, base_time, array, base_frequency,
     return modulated_wave * intensity  # Adjust overall wave amplitude
 
 # Main sound generation function
-def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44100):
+def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44800):
     # Average RGB values
     avg_red_overall = np.mean(rgb_dict['1'])
     avg_green_overall = np.mean(rgb_dict['2'])
@@ -196,59 +213,196 @@ def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44100):
     # Select the channel based on dominant color and apply modulation
     if dominant_color == 'red':
         combined_wave = modulate_frequency('square', time, interpolate_red, base_frequency, 
-                                           modulation_duration=6, modulation_intensity=0.4, envelope_intensity=0.8,intensity = .3) * level
+                                           modulation_duration=6, modulation_intensity=0.6, envelope_intensity=0.8,intensity = .9) * level
     elif dominant_color == 'green':
-        combined_wave = modulate_frequency('saw', time, interpolate_green, base_frequency, 
-                                           modulation_duration=5, modulation_intensity=0.6, envelope_intensity=0.7,intensity = .5) * level
+        combined_wave = modulate_frequency('saw', time, interpolate_green, base_frequency,
+                                           modulation_duration=5, modulation_intensity=0.6, envelope_intensity=0.7,intensity = .9) * level
     else:  # 'blue'
         combined_wave = modulate_frequency('sine', time, interpolate_blue, base_frequency, 
-                                           modulation_duration=4, modulation_intensity=0.6, envelope_intensity=1.0,intensity = .5) * level
+                                           modulation_duration=4, modulation_intensity=0.6, envelope_intensity=1.0,intensity = .9) * level
 
     # Normalize the combined wave to the range of int16 (to avoid distortion)
-    combined_wave = combined_wave * level
-
-
-    # Apply overtones
-
-
-
 
     # Apply LFO
-    combined_wave = apply_lfo(combined_wave, avg_red_overall, 'sine', 3, time, interpolate_red, interpolate_green, interpolate_blue)
-    #combined_wave = apply_lfo(combined_wave, avg_red_overall, 'sawtooth', 3, time, interpolate_red, interpolate_green, interpolate_blue)
 
 
+    combined_wave = modify_base_tone (combined_wave, color_avg(avg_red_overall, avg_green_overall, avg_blue_overall), 'sine', time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1)
+
+
+
+
+    combined_wave = combined_wave * level
     combined_wave = (combined_wave * 32767).astype(np.int16)
-
+    
     # Write the output to a WAV file
     output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
     scipy.io.wavfile.write(output_file_name, sample_rate, combined_wave)
 
-    #return {'sound':combined_wave, 'dominant_color':dominant_color, 'time':time, "rgb_arrays": np.asarray[interpolate_red, interpolate_green, interpolate_blue],'rgb_dictionary':rgb_dict}
+    return 
 
 
 
+def color_avg(r,g,b):
+    return np.mean([r,g,b])
 
-def apply_lfo(sound, color_avg, type, variance, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_f=1, scalar_a=1):
-    lfo_frequency = (np.mod((variance * color_avg) + 3,30) + 1) * scalar_f
+def color_diff(r,g,b):
+    return r - g - b
+
+def apply_lfo(sound, color_avg, type, variance, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+
+
+    lfo_frequency = map_to_range_with_variability(color_avg, 0, 1)
     if type == 'sine':
-        lfo = (interpolate_blue * scalar_a) * np.sin(2 * np.pi * lfo_frequency * time) * intensity
-    elif type == 'square':
-        lfo = (interpolate_red * scalar_a) * signal.square(2 * np.pi * lfo_frequency * time) * intensity
+        lfo = (interpolate_blue * scalar_amplitude) * np.sin(2 * np.pi * lfo_frequency * time) * intensity
+    elif type == 'square':  
+        lfo = (interpolate_red * scalar_amplitude) * signal.square(2 * np.pi * lfo_frequency * time) * intensity
     elif type == 'sawtooth':
-        lfo = (interpolate_green * scalar_a) * signal.sawtooth(2 * np.pi * lfo_frequency * time) * intensity
+        lfo = (interpolate_green * scalar_amplitude) * signal.sawtooth(2 * np.pi * lfo_frequency * time) * intensity
 
-    return multiply_wave(lfo,sound)
+    return lfo
+
+def map_to_range_with_variability(x, input_min, input_max, output_min=0.2, output_max=30, variability_factor=2):
+    # Clamp the input value to ensure it's within the expected range
+    x = max(min(x, input_max), input_min)
+    # Scale the input to [0, 1]
+    normalized_input = (x - input_min) / (input_max - input_min)
+    # Apply an exponential function to increase variability
+    variable_value = math.pow(normalized_input, variability_factor)
+    # Linearly map the variable value to the output range
+    return output_min + (output_max - output_min) * variable_value
+
+def calculate_overtone_frequencies(base_freq,num,type):
+
+ 
+    match type:
+        case 'sine':
+            frequencies = []
+            for n in range(2,num+2):
+                frequencies.append(base_freq*n)
+
+            return frequencies
+        case 'square':
+            frequencies = []
+            for n in range(2,num+2):
+                frequencies.append(base_freq*n+1)
+            return frequencies
+        
+        case 'sawtooth':
+
+            frequencies = []
+            for n in range(2,num+2):
+                frequencies.append(base_freq*n+1)
+
+    return frequencies
 
 
-def multiply_wave(wave, second_wave):
-    return wave * second_wave
+
+def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time):
+    # Derive a seed from the image's characteristics (e.g., average of RGB channels)
+    seed_value = int(np.mean([np.mean(rgb_dict['1']), np.mean(rgb_dict['2']), np.mean(rgb_dict['3'])]) * 100)
+    
+    # Calculate intensity adjustment factor based on brightness
+    intensity_scale = 0.3 + (0.7 * brightness)  # Intensity scale varies with brightness
+
+    def calculate_intensity(n, total_overtones):
+        # Intensity is scaled between 0 and 1 based on position and seed value
+        base_intensity = .7 - (n / total_overtones)  # Decreases linearly from 1 to 0
+        variability = (seed_value % (n + 1)) / (total_overtones + 1)  # Adds some variation
+        intensity = base_intensity * (1 + variability * intensity_scale)
+        # Ensure the intensity remains within [0, 1] range
+        return np.clip(intensity, 0, 1)
+
+    # Match based on wave type and generate overtones with variable intensities
+    match wave_type:
+        case 'sine':
+            overtone_amount = int(round(6 + (15 - 6) * brightness))
+            overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'sine')
+            for n in range(overtone_amount):
+                intensity = calculate_intensity(n, overtone_amount)
+                sound += np.sin(2 * np.pi * overtone_frequencies[n] * time) * intensity
+
+        case 'square':
+            overtone_amount = int(round(15 + (25 - 15) * brightness))
+            overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'square')
+            for n in range(overtone_amount):
+                intensity = calculate_intensity(n, overtone_amount)
+                sound += np.square(2 * np.pi * overtone_frequencies[n] * time) * intensity
+
+        case 'sawtooth':
+            overtone_amount = int(round(10 + (20 - 10) * brightness))
+            overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'sawtooth')
+            for n in range(overtone_amount):
+                intensity = calculate_intensity(n, overtone_amount)
+                sound += np.sawtooth(2 * np.pi * overtone_frequencies[n] * time) * intensity
+
+    return sound
 
 
-def apply_overtones(sound, sample_rate):
 
 
-    pass
+def modify_base_tone(sound, color_avg, type, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+
+    #apply overtones
+    sound = apply_overtones(sound, type, 261.6, color_avg, {'1': interpolate_red, '2': interpolate_green, '3': interpolate_blue}, time)
+
+
+
+    #apply lfo
+    types = []
+    lfos = []
+    lfo_amount = int(round(1 + (5 - 1) * color_avg))
+    #lfo_amount = int(abs(np.mod(3, 5) * color_diff))
+    split_red = np.array_split(interpolate_red, lfo_amount)
+    split_green = np.array_split(interpolate_green, lfo_amount)
+    split_blue = np.array_split(interpolate_blue, lfo_amount)
+
+    for elm in range(lfo_amount):
+        segment_avg_red = np.mean(split_red[elm])
+        segment_avg_blue = np.mean(split_blue[elm])
+        segment_avg_green = np.mean(split_green[elm])
+        
+        max_val = np.max([segment_avg_red,segment_avg_blue,segment_avg_green])
+        min_val = np.min([segment_avg_red,segment_avg_blue,segment_avg_green])
+
+        delta = max_val - min_val
+        lightness = (max_val + min_val) / 2
+
+        if delta == 0:
+            saturation = .01
+        else:
+            if lightness < 0.5:
+                saturation = delta / (max_val + min_val)
+            else:
+                saturation = delta / (2 - max_val - min_val)
+        
+
+        if max_val == segment_avg_red:
+            types.append('square')
+        elif max_val == segment_avg_blue:
+            types.append('sine')
+        else:
+            types.append('sawtooth') 
+
+    for i in range(lfo_amount):
+        lfo = apply_lfo(sound, color_avg+saturation, types[i], 1, time, interpolate_red, interpolate_green, interpolate_blue)
+        lfos.append(lfo)
+    final_lfo = np.ones_like(sound)
+    for i in range(len(lfos)):
+        final_lfo *= lfos[i]
+
+
+    return final_lfo * sound
+    return sound
+        
+
+
+
+
+
+def multiply_wave(wave, second_wave, scalar=1):
+
+
+    return wave * (second_wave*scalar)
 
 
 def generate_audio_nosplit(arrays, out_path):
@@ -326,8 +480,8 @@ def imagetoaudio(img_path, out_path, kernel_size, step_size):
     for i in range(len(Images)):
         print(f"Convolving image {file_names[i]} with Kernel Size {kernel_size} and Step Size {step_size}")
         rgb_dict = convolve_rgb(Images[i], kernel_size, step_size, )  
-        generate_sound_v3(rgb_dict=rgb_dict, out_path=out_path, level=.9, file_name=file_names[i],sample_rate=44100)
-        #generate_audio_1(rgb_dict=rgb_dict,out_path=out_path, intensity=.9, file_name=file_names[i])
+        generate_sound_v3(rgb_dict=rgb_dict, out_path=out_path+"audionew/", level=.5, file_name=file_names[i],sample_rate=48000)
+        # generate_audio_1(rgb_dict=rgb_dict,out_path=out_path+"audioold/", intensity=.9, file_name=file_names[i])
               
 
 
