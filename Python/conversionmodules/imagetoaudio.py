@@ -131,6 +131,7 @@ def generate_sound(
     lfo_scalar_freq=1,
     lfo_scalar_amplitude=1,
     lfo_intensity=1,
+    overtone_num_scalar=1,
 ):
     """
     Generate a sound based on the given RGB values.
@@ -209,17 +210,17 @@ def generate_sound(
 
     average_color = color_avg(avg_red_overall,avg_green_overall,avg_blue_overall)
 
-    final_sound = modify_base_tone(sound = combined_wave, color_average=average_color, overtone_type = 'sine', time=time, interpolate_red=interpolate_red, interpolate_green=interpolate_green, interpolate_blue=interpolate_blue, intensity = lfo_intensity, scalar_freq=lfo_scalar_freq, scalar_amplitude=lfo_scalar_amplitude,base_freq=base_frequency)
+    final_sound = modify_base_tone(sound = combined_wave, color_average=average_color, overtone_type = 'sine', time=time, interpolate_red=interpolate_red, interpolate_green=interpolate_green, interpolate_blue=interpolate_blue, intensity = lfo_intensity, scalar_freq=lfo_scalar_freq, scalar_amplitude=lfo_scalar_amplitude,base_freq=base_frequency,overtone_num_scalar = overtone_num_scalar)
     
 
     # Save the sound file
-    combined_wave = combined_wave * sound_level
-    combined_wave = (combined_wave * 32767).astype(np.int16)
+    final_sound = final_sound * sound_level
+    final_sound = (final_sound * 32767).astype(np.int16)
     
     # Write the output to a WAV file
     output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
     try:
-        scipy.io.wavfile.write(output_file_name, sample_rate, combined_wave)
+        scipy.io.wavfile.write(output_file_name, sample_rate, final_sound)
     except Exception as e:
         print(f"Error writing to file: {e}")
 
@@ -346,7 +347,7 @@ def map_to_range_with_variability(x, input_min, input_max, output_min=0.2, outpu
     return output_min + (output_max - output_min) * variable_value
 
 
-def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time):
+def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time,overtone_num_scalar=1):
     """
     Apply overtones to a sound based on an image's characteristics.
 
@@ -400,21 +401,21 @@ def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time):
     # Match based on wave type and generate overtones with variable intensities
     match wave_type:
         case 'sine':
-            overtone_amount = int(round(4 + (12 - 4) * brightness))
+            overtone_amount = int(round(4 + (12 - 4) * brightness)*overtone_num_scalar)
             overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'sine')
             for n in range(overtone_amount):
                 intensity = calculate_intensity(n, overtone_amount)
                 sound += np.sin(2 * np.pi * overtone_frequencies[n] * time) * intensity
 
         case 'square':
-            overtone_amount = int(round(10 + (20 - 10) * brightness))
+            overtone_amount = int(round(10 + (20 - 10) * brightness)*overtone_num_scalar)
             overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'square')
             for n in range(overtone_amount):
                 intensity = calculate_intensity(n, overtone_amount)
                 sound += np.square(2 * np.pi * overtone_frequencies[n] * time) * intensity
 
         case 'sawtooth':
-            overtone_amount = int(round(8 + (15 - 8) * brightness))
+            overtone_amount = int(round(8 + (15 - 8) * brightness)*overtone_num_scalar)
             overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'sawtooth')
             for n in range(overtone_amount):
                 intensity = calculate_intensity(n, overtone_amount)
@@ -523,7 +524,7 @@ def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, in
 
     return multiply_wave(lfo_sound, sound)
 
-def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1,overtone_num_scalar=1):
     """
     Modify a base sound wave by applying overtones and a low frequency
     oscillator (LFO).
@@ -567,7 +568,7 @@ def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interp
     if interpolate_red is None or interpolate_green is None or interpolate_blue is None:
         raise ValueError('Interpolated color channels cannot be null')
 
-    sound = apply_overtones(sound = sound, wave_type = overtone_type, time = time, base_freq=base_freq, brightness= brightness(rgb = (interpolate_red, interpolate_green, interpolate_blue)), rgb_dict = {'1': interpolate_red, '2': interpolate_green, '3': interpolate_blue})
+    sound = apply_overtones(sound = sound, wave_type = overtone_type, time = time, base_freq=base_freq, brightness= brightness(rgb = (interpolate_red, interpolate_green, interpolate_blue)), rgb_dict = {'1': interpolate_red, '2': interpolate_green, '3': interpolate_blue},overtone_num_scalar=overtone_num_scalar)
 
     # Apply LFO
     sound = apply_lfo(sound = sound , color_average = color_average, time = time, interpolate_red=interpolate_red, interpolate_green=interpolate_green, interpolate_blue=interpolate_blue, intensity = intensity, scalar_freq = scalar_freq, scalar_amplitude = scalar_amplitude)
@@ -586,7 +587,7 @@ def main_generation_handler(
         modulation_duration: int,
         modulation_intensity: float,
         modulation_envelope_intensity: float,
-
+        overtone_num_scalar: float,
         lfo_scalar_freq: float,
         lfo_scalar_amplitude: float,
         lfo_intensity: float
@@ -668,6 +669,7 @@ def main_generation_handler(
                 lfo_scalar_freq = lfo_scalar_freq,
                 lfo_scalar_amplitude = lfo_scalar_amplitude,
                 lfo_intensity = lfo_intensity,
+                overtone_num_scalar = overtone_num_scalar,
                 file_name=file_names[n]
 
             )
@@ -699,6 +701,7 @@ def main_generation_handler(
             lfo_scalar_freq = lfo_scalar_freq,
             lfo_scalar_amplitude = lfo_scalar_amplitude,
             lfo_intensity = lfo_intensity,
+            overtone_num_scalar = overtone_num_scalar,
             file_name=file_name
         )
         print("Audio generated for: "+file_name)
@@ -731,7 +734,7 @@ if __name__ == "__main__":
         lfo_scalar_freq = float(sys.argv[11]) if len(sys.argv) > 11 else 1
         lfo_scalar_amplitude = float(sys.argv[12]) if len(sys.argv) > 12 else 1
         lfo_intensity = float(sys.argv[13]) if len(sys.argv) > 13 else 1 
-
+        overtone_num_scalar = float(sys.argv[14]) if len(sys.argv) > 14 else 1
 
         main_generation_handler(
             img_path= img_path,
@@ -746,7 +749,9 @@ if __name__ == "__main__":
             modulation_duration = modulation_duration,
             lfo_scalar_freq = lfo_scalar_freq,
             lfo_scalar_amplitude = lfo_scalar_amplitude,
-            lfo_intensity = lfo_intensity
+            lfo_intensity = lfo_intensity,
+            overtone_num_scalar = overtone_num_scalar
+
         )
 
     else:
@@ -757,12 +762,13 @@ if __name__ == "__main__":
         sound_level = 1
         sample_rate = 44800
         sound_duration = 6
-        modulation_intensity = 0.4
+        modulation_intensity = 0.6
         modulation_envelope_intensity = 0.8
         modulation_duration = 6
-        lfo_scalar_freq = 1
-        lfo_scalar_amplitude = 1
+        lfo_scalar_freq = .7
+        lfo_scalar_amplitude = .6
         lfo_intensity = 1
+        overtone_num_scalar = 5
         main_generation_handler(
             img_path= img_path,
             out_path = out_path,
@@ -776,5 +782,6 @@ if __name__ == "__main__":
             modulation_duration = modulation_duration,
             lfo_scalar_freq = lfo_scalar_freq,
             lfo_scalar_amplitude = lfo_scalar_amplitude,
-            lfo_intensity = lfo_intensity
+            lfo_intensity = lfo_intensity,
+            overtone_num_scalar = overtone_num_scalar
         )
