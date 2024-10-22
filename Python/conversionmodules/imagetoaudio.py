@@ -1,157 +1,89 @@
-import numpy as np
-from PIL import Image
+import sys
 import os
 import glob
-import scipy.io
-import sys
-import random
+import numpy as np
+from PIL import Image
 from scipy import signal
-import wave
 import math
-import hashlib
+import scipy
 
-def convolve(img_array,out_path, kernel, step=2):
-    x = img_array.shape[0]
-    y = img_array.shape[1]
+def image_convolution(image, kernel_size, step_size):
+    """
+    Compute the average RGB values for each channel
+    of an image array in blocks of size kernel_size x kernel_size,
+    stepping by step_size.
 
-    resultant_arr = []
+    Parameters
+    ----------
+    image : numpy array
+        The image array to process
+    kernel_size : int
+        The size of the kernel to use
+    step_size : int
+        The step size to use
 
-    for i in range(0, x - kernel + 1, step):
-        for j in range(0, y - kernel + 1, step):
-            avg = np.mean(img_array[i:i+kernel, j:j+kernel])/10
-            resultant_arr.append(avg)
+    Returns
+    -------
+    rgb_dict : dict
+        A dictionary with keys '1', '2', and '3' containing the
+        average red, green, and blue values respectively, for each
+        block of the image array
+    """
 
-    resultant_arr = np.array(resultant_arr)
-    print(resultant_arr.shape)
-    generate_audio_nosplit(resultant_arr, out_path)
-    return
+    if image is None:
+        raise ValueError('Image cannot be null')
 
+    if kernel_size <= 0 or step_size <= 0:
+        raise ValueError('Kernel size and step size must be positive')
 
-def convolve_rgb(img_array,kernel, step=2):
-    x = img_array.shape[0]
-    y = img_array.shape[1]
+    x = image.shape[0]
+    y = image.shape[1]
 
-    red_values = img_array[:, :, 0]
-    green_values = img_array[:, :, 1]
-    blue_values = img_array[:, :, 2]
+    if kernel_size > x or kernel_size > y:
+        raise ValueError('Kernel size cannot be larger than the image')
+
+    red_values = image[:, :, 0]
+    green_values = image[:, :, 1]
+    blue_values = image[:, :, 2]
 
     rgb_dict = {'1': [], '2': [], '3': []}
 
     # Calculate average values for each channel
-    for i in range(0, x - kernel + 1, step):
-        for j in range(0, y - kernel + 1, step):
-            avg_red = (np.mean(red_values[i:i + kernel, j:j + kernel])+0.000000000001) / 256
-            avg_green = (np.mean(green_values[i:i + kernel, j:j + kernel])+0.000000000001) / 256
-            avg_blue = (np.mean(blue_values[i:i + kernel, j:j + kernel])+0.000000000001) / 256
+    for i in range(0, x - kernel_size + 1, step_size):
+        for j in range(0, y - kernel_size + 1, step_size):
+            avg_red = (np.mean(red_values[i:i + kernel_size, j:j + kernel_size])+0.000000000001) / 256
+            avg_green = (np.mean(green_values[i:i + kernel_size, j:j + kernel_size])+0.000000000001) / 256
+            avg_blue = (np.mean(blue_values[i:i + kernel_size, j:j + kernel_size])+0.000000000001) / 256
             
             rgb_dict['1'].append(avg_red)
             rgb_dict['2'].append(avg_green)
             rgb_dict['3'].append(avg_blue)
-
-    
-    
     return rgb_dict
 
-def brightness(rgb):
-    return np.mean(rgb)
-
-# Function to ensure all arrays have the same dimension
-def ensure_same_dimension(arrays):
-    # Find maximum size
-    max_size = max(arr.shape[0] for arr in arrays)
-    
-    # Pad or truncate arrays to the same size
-    adjusted_arrays = []
-    for arr in arrays:
-        if arr.shape[0] < max_size:
-            adjusted_arrays.append(np.pad(arr, (0, max_size - arr.shape[0]), mode='constant'))
-        else:
-            adjusted_arrays.append(arr[:max_size])  # Truncate if larger
-    
-    return adjusted_arrays
-
-def generate_audio_1(rgb_dict, out_path, intensity, file_name):
-
-    # Compute overall average for each color channel
-    avg_red_overall = np.mean(rgb_dict['1'])
-    avg_green_overall = np.mean(rgb_dict['2'])
-    avg_blue_overall = np.mean(rgb_dict['3'])
-
-    # Find dominant color channel
-    dominant_color = max([('red', avg_red_overall), 
-                          ('green', avg_green_overall), 
-                          ('blue', avg_blue_overall)], key=lambda x: x[1])[0]
-    
-    weights = [.5, .2, .1]
-
-    templates = {
-        'pad': [weights[2], weights[1], weights[0]],
-        'lead': [weights[0], weights[1], weights[2]],
-        'string': [weights[1], weights[2], weights[0]]
-    }
-
-    audio_divisions = 10
-
-    # Split the RGB values into segments
-    subdivided_blue_array = np.array_split(rgb_dict["3"], audio_divisions)
-    subdivided_red_array = np.array_split(rgb_dict["1"], audio_divisions)
-    subdivided_green_array = np.array_split(rgb_dict["2"], audio_divisions)
-
-    pad_waves = []
-    lead_waves = []
-    string_waves = []
-
-    brightness = (avg_red_overall + avg_green_overall + avg_blue_overall) / 3
-
-    for i in range(audio_divisions):
-        pad_waves.append((np.sin(np.deg2rad(subdivided_blue_array[i]))))
-        lead_waves.append((signal.square(np.deg2rad(subdivided_red_array[i])))*.2)
-        string_waves.append((signal.sawtooth(np.deg2rad(subdivided_green_array[i]))))
-
-    concatenated_pad_waves = np.concatenate(pad_waves)
-    concatenated_lead_waves = np.concatenate(lead_waves)
-    concatenated_string_waves = np.concatenate(string_waves)
-
-    concatenated_pad_waves, concatenated_lead_waves, concatenated_string_waves = ensure_same_dimension(
-        [concatenated_pad_waves, concatenated_lead_waves, concatenated_string_waves])
-
-    # Combine the waves based on the dominant color
-    match dominant_color:
-        case 'blue':
-            weights = templates['pad']
-            combined_wave = (np.multiply(concatenated_pad_waves, weights[2]) +
-                             (np.multiply(concatenated_lead_waves, weights[0]) / avg_blue_overall) +
-                             (np.multiply(concatenated_string_waves, weights[1]) / avg_blue_overall))
-        case 'green':
-            weights = templates["string"]
-            combined_wave = ((np.multiply(concatenated_pad_waves, weights[2]) / avg_green_overall) +
-                             (np.multiply(concatenated_lead_waves, weights[0]) / avg_green_overall) +
-                             (np.multiply(concatenated_string_waves, weights[1])))
-        case 'red':
-            weights = templates["lead"]
-            combined_wave = ((np.multiply(concatenated_pad_waves, weights[2]) / avg_red_overall) +
-                             (np.multiply(concatenated_lead_waves, weights[0])) +
-                             (np.multiply(concatenated_string_waves, weights[1]) / avg_red_overall))
-
-    sample_rate = 30000
-
-    # Adjust the amplitude of the combined wave
-    combined_wave = combined_wave * intensity
-
-    # Normalize the combined wave to the range of int16 (to avoid distortion)
-    output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
-    scipy.io.wavfile.write(output_file_name, sample_rate, (combined_wave * 32767).astype(np.int16))
-
-    print(f"Generated audio file: {output_file_name}")
-    return combined_wave
-
-
-
 def interpolate_rgb_array(array, target_length):
+    """
+    Interpolates an array of RGB values to a target length.
+
+    Parameters
+    ----------
+    array : numpy array
+        The array of RGB values to interpolate
+    target_length : int
+        The target length of the interpolated array
+
+    Returns
+    -------
+    numpy array
+        The interpolated array of RGB values
+    """
+    if array is None:
+        raise ValueError('Array cannot be null')
+    if target_length <= 0:
+        raise ValueError('Target length must be greater than 0')
+
     return np.interp(np.linspace(0, len(array) - 1, target_length), 
                      np.arange(len(array)), array)
 
-# Function to modulate the frequency with options for wave type and control over modulation parameters
 def modulate_frequency(wave_type, base_time, array, base_frequency, 
                        modulation_duration=6, modulation_intensity=0.4, envelope_intensity=1.0,intensity = .8):
     """
@@ -185,9 +117,64 @@ def modulate_frequency(wave_type, base_time, array, base_frequency,
 
     return modulated_wave * intensity  # Adjust overall wave amplitude
 
-# Main sound generation function
-def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44800):
-    # Average RGB values
+
+def generate_sound(
+    rgb_dict,
+    out_path,
+    sound_level,
+    file_name,
+    sample_rate=44800,
+    sound_duration=6,
+    modulation_intensity=0.4,
+    modulation_envelope_intensity=0.8,
+    modulation_duration=6,
+    lfo_scalar_freq=1,
+    lfo_scalar_amplitude=1,
+    lfo_intensity=1,
+):
+    """
+    Generate a sound based on the given RGB values.
+
+    Parameters
+    ----------
+    rgb_dict : dict
+        A dictionary mapping color channel names ('1', '2', '3') to lists of RGB values.
+    out_path : str
+        The path to write the output sound file to.
+    sound_level : float
+        The volume of the sound, from 0 (silent) to 1 (maximum volume).
+    file_name : str
+        The name of the output file, without extension.
+    sample_rate : int, optional
+        The sample rate of the output sound file, in Hz. Default is 44800.
+    sound_duration : float, optional
+        The duration of the sound, in seconds. Default is 6.
+    modulation_intensity : float, optional
+        The intensity of the modulation, from 0 (no modulation) to 1 (maximum modulation). Default is 0.4.
+    modulation_envelope_intensity : float, optional
+        The intensity of the modulation envelope, from 0 (no modulation) to 1 (maximum modulation). Default is 0.8.
+    modulation_duration : float, optional
+        The duration of the modulation, in seconds. Default is 6.
+    lfo_scalar_freq : float, optional
+        The frequency scaling factor for the LFO. Default is 1.
+    lfo_scalar_amplitude : float, optional
+        The amplitude scaling factor for the LFO. Default is 1.
+    lfo_intensity : float, optional
+        The intensity of the LFO, from 0 (no LFO) to 1 (maximum LFO). Default is 1.
+
+    Returns
+    -------
+    None
+    """
+    if rgb_dict is None:
+        raise ValueError('rgb_dict cannot be null')
+    if out_path is None:
+        raise ValueError('out_path cannot be null')
+    if file_name is None:
+        raise ValueError('file_name cannot be null')
+    if sound_level < 0 or sound_level > 1:
+        raise ValueError('sound_level must be between 0 and 1')
+
     avg_red_overall = np.mean(rgb_dict['1'])
     avg_green_overall = np.mean(rgb_dict['2'])
     avg_blue_overall = np.mean(rgb_dict['3'])
@@ -198,71 +185,158 @@ def generate_sound_v3(rgb_dict, out_path, level, file_name, sample_rate=44800):
                           ('blue', avg_blue_overall)], key=lambda x: x[1])[0]
 
     # Set frequency for C4 tone (~261.6 Hz)
-    base_frequency = 261.6
-    duration = 5  # Duration of the sound in seconds
+    base_frequency = 261.6  # Duration of the sound in seconds
 
     # Create a time array
-    time = np.arange(0, duration, 1/sample_rate)
+    time = np.arange(0, sound_duration, 1/sample_rate)
 
     # Interpolate RGB array to match the time array length
     interpolate_red = interpolate_rgb_array(rgb_dict['1'], len(time))
     interpolate_green = interpolate_rgb_array(rgb_dict['2'], len(time))
     interpolate_blue = interpolate_rgb_array(rgb_dict['3'], len(time))
     
-
-    # Select the channel based on dominant color and apply modulation
     if dominant_color == 'red':
         combined_wave = modulate_frequency('square', time, interpolate_red, base_frequency, 
-                                           modulation_duration=6, modulation_intensity=0.6, envelope_intensity=0.8,intensity = .9) * level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
     elif dominant_color == 'green':
         combined_wave = modulate_frequency('saw', time, interpolate_green, base_frequency,
-                                           modulation_duration=5, modulation_intensity=0.6, envelope_intensity=0.7,intensity = .9) * level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
     else:  # 'blue'
         combined_wave = modulate_frequency('sine', time, interpolate_blue, base_frequency, 
-                                           modulation_duration=4, modulation_intensity=0.6, envelope_intensity=1.0,intensity = .9) * level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
 
-    # Normalize the combined wave to the range of int16 (to avoid distortion)
+    #Generate overtones and apply lfo
 
-    # Apply LFO
+    average_color = color_avg(avg_red_overall,avg_green_overall,avg_blue_overall)
 
+    final_sound = modify_base_tone(sound = combined_wave, color_average=average_color, overtone_type = 'sine', time=time, interpolate_red=interpolate_red, interpolate_green=interpolate_green, interpolate_blue=interpolate_blue, intensity = lfo_intensity, scalar_freq=lfo_scalar_freq, scalar_amplitude=lfo_scalar_amplitude,base_freq=base_frequency)
+    
 
-    combined_wave = modify_base_tone (combined_wave, color_avg(avg_red_overall, avg_green_overall, avg_blue_overall), 'sine', time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1)
-
-
-
-
-    combined_wave = combined_wave * level
+    # Save the sound file
+    combined_wave = combined_wave * sound_level
     combined_wave = (combined_wave * 32767).astype(np.int16)
     
     # Write the output to a WAV file
     output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
-    scipy.io.wavfile.write(output_file_name, sample_rate, combined_wave)
+    try:
+        scipy.io.wavfile.write(output_file_name, sample_rate, combined_wave)
+    except Exception as e:
+        print(f"Error writing to file: {e}")
 
-    return 
+
+def color_avg(r, g, b):
+    """
+    Calculate the average of the given RGB values.
+
+    Parameters
+    ----------
+    r, g, b : float
+        The red, green, and blue color values.
+
+    Returns
+    -------
+    float
+        The average of the given RGB values.
+    """
+    if r is None or g is None or b is None:
+        raise ValueError('RGB values cannot be null')
+    return np.mean([r, g, b])
 
 
+def color_diff(r, g, b):
+    
+    """
+    Calculate the difference between the given RGB values.
 
-def color_avg(r,g,b):
-    return np.mean([r,g,b])
+    Parameters
+    ----------
+    r, g, b : float
+        The red, green, and blue color values.
 
-def color_diff(r,g,b):
+    Returns
+    -------
+    float
+        The difference between the given RGB values.
+    """
+    if r is None or g is None or b is None:
+        raise ValueError('RGB values cannot be null')
     return r - g - b
 
-def apply_lfo(sound, color_avg, type, variance, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+def calculate_overtone_frequencies(base_freq, num, type):
+    """
+    Calculate the overtone frequencies based on the given parameters.
 
+    Parameters
+    ----------
+    base_freq : float
+        The base frequency for the overtones.
+    num : int
+        The number of overtones to calculate.
+    type : str
+        The type of waveform for the overtones. Can be 'sine', 'square', or 'sawtooth'.
 
-    lfo_frequency = map_to_range_with_variability(color_avg, 0, 1)
+    Returns
+    -------
+    list
+        A list of calculated overtone frequencies.
+    """
+    frequencies = []
+    
     if type == 'sine':
-        lfo = (interpolate_blue * scalar_amplitude) * np.sin(2 * np.pi * lfo_frequency * time) * intensity
-    elif type == 'square':  
-        lfo = (interpolate_red * scalar_amplitude) * signal.square(2 * np.pi * lfo_frequency * time) * intensity
+        frequencies = [base_freq * n for n in range(2, num + 2)]
+    elif type == 'square':
+        frequencies = [base_freq * n + 1 for n in range(2, num + 2)]
     elif type == 'sawtooth':
-        lfo = (interpolate_green * scalar_amplitude) * signal.sawtooth(2 * np.pi * lfo_frequency * time) * intensity
+        frequencies = [base_freq * n + 1 for n in range(2, num + 2)]
 
-    return lfo
-
+    return frequencies
 def map_to_range_with_variability(x, input_min, input_max, output_min=0.2, output_max=30, variability_factor=2):
     # Clamp the input value to ensure it's within the expected range
+    """
+    Map a value from an input range to an output range with added variability.
+
+    The input value is first clamped to the input range, then scaled to [0, 1].
+    An exponential function is applied to increase the variability of the output.
+    Finally, the value is linearly mapped to the output range.
+
+    Parameters
+    ----------
+    x : float
+        The input value.
+    input_min : float
+        The minimum of the input range.
+    input_max : float
+        The maximum of the input range.
+    output_min : float, optional
+        The minimum of the output range. Defaults to 0.2.
+    output_max : float, optional
+        The maximum of the output range. Defaults to 30.
+    variability_factor : float, optional
+        The exponent to which the normalized input should be raised. Defaults to 2.
+
+    Returns
+    -------
+    float
+        The mapped value.
+    """
+    if x is None:
+        raise ValueError('Input value cannot be null')
+    if input_min is None:
+        raise ValueError('Input minimum cannot be null')
+    if input_max is None:
+        raise ValueError('Input maximum cannot be null')
+    if output_min is None:
+        raise ValueError('Output minimum cannot be null')
+    if output_max is None:
+        raise ValueError('Output maximum cannot be null')
+    if variability_factor is None:
+        raise ValueError('Variability factor cannot be null')
+    if input_min >= input_max:
+        raise ValueError('Input range is invalid')
+    if output_min >= output_max:
+        raise ValueError('Output range is invalid')
+    
+
     x = max(min(x, input_max), input_min)
     # Scale the input to [0, 1]
     normalized_input = (x - input_min) / (input_max - input_min)
@@ -271,36 +345,47 @@ def map_to_range_with_variability(x, input_min, input_max, output_min=0.2, outpu
     # Linearly map the variable value to the output range
     return output_min + (output_max - output_min) * variable_value
 
-def calculate_overtone_frequencies(base_freq,num,type):
-
- 
-    match type:
-        case 'sine':
-            frequencies = []
-            for n in range(2,num+2):
-                frequencies.append(base_freq*n)
-
-            return frequencies
-        case 'square':
-            frequencies = []
-            for n in range(2,num+2):
-                frequencies.append(base_freq*n+1)
-            return frequencies
-        
-        case 'sawtooth':
-
-            frequencies = []
-            for n in range(2,num+2):
-                frequencies.append(base_freq*n+1)
-
-    return frequencies
-
-
 
 def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time):
+    """
+    Apply overtones to a sound based on an image's characteristics.
+
+    Parameters
+    ----------
+    sound : array_like
+        The sound to which overtones should be applied.
+    wave_type : str
+        The type of wave to apply overtones to. Options are 'sine', 'square', and 'sawtooth'.
+    base_freq : float
+        The base frequency of the sound.
+    brightness : float
+        The brightness of the image.
+    rgb_dict : dict
+        A dictionary with keys '1', '2', and '3' containing the red, green, and blue color channels of the image.
+    time : array_like
+        An array of time values at which the sound should be evaluated.
+
+    Returns
+    -------
+    array_like
+        The sound with overtones applied.
+    """
+    if sound is None:
+        raise ValueError('Input sound cannot be null')
+    if wave_type is None:
+        raise ValueError('Input wave type cannot be null')
+    if base_freq is None:
+        raise ValueError('Input base frequency cannot be null')
+    if brightness is None:
+        raise ValueError('Input brightness cannot be null')
+    if rgb_dict is None:
+        raise ValueError('Input RGB dictionary cannot be null')
+    if time is None:
+        raise ValueError('Input time array cannot be null')
+
     # Derive a seed from the image's characteristics (e.g., average of RGB channels)
     seed_value = int(np.mean([np.mean(rgb_dict['1']), np.mean(rgb_dict['2']), np.mean(rgb_dict['3'])]) * 100)
-    
+
     # Calculate intensity adjustment factor based on brightness
     intensity_scale = 0.3 + (0.7 * brightness)  # Intensity scale varies with brightness
 
@@ -315,21 +400,21 @@ def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time):
     # Match based on wave type and generate overtones with variable intensities
     match wave_type:
         case 'sine':
-            overtone_amount = int(round(6 + (15 - 6) * brightness))
+            overtone_amount = int(round(4 + (12 - 4) * brightness))
             overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'sine')
             for n in range(overtone_amount):
                 intensity = calculate_intensity(n, overtone_amount)
                 sound += np.sin(2 * np.pi * overtone_frequencies[n] * time) * intensity
 
         case 'square':
-            overtone_amount = int(round(15 + (25 - 15) * brightness))
+            overtone_amount = int(round(10 + (20 - 10) * brightness))
             overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'square')
             for n in range(overtone_amount):
                 intensity = calculate_intensity(n, overtone_amount)
                 sound += np.square(2 * np.pi * overtone_frequencies[n] * time) * intensity
 
         case 'sawtooth':
-            overtone_amount = int(round(10 + (20 - 10) * brightness))
+            overtone_amount = int(round(8 + (15 - 8) * brightness))
             overtone_frequencies = calculate_overtone_frequencies(base_freq, overtone_amount, 'sawtooth')
             for n in range(overtone_amount):
                 intensity = calculate_intensity(n, overtone_amount)
@@ -337,193 +422,359 @@ def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time):
 
     return sound
 
+def brightness(rgb):
+    return np.mean(rgb)
 
 
+def multiply_wave(wave, second_wave, scalar=1):
+    """
+    Multiply two waves together with an optional scalar factor.
 
-def modify_base_tone(sound, color_avg, type, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+    Parameters
+    ----------
+    wave : array_like
+        The first wave to be multiplied.
+    second_wave : array_like
+        The second wave to be multiplied.
+    scalar : float, optional
+        The scalar factor to apply to the second wave. Defaults to 1.
 
-    #apply overtones
-    sound = apply_overtones(sound, type, 261.6, color_avg, {'1': interpolate_red, '2': interpolate_green, '3': interpolate_blue}, time)
+    Returns
+    -------
+    array_like
+        The product of the two waves, scaled by the scalar factor.
+    """
+    if wave is None or second_wave is None:
+        raise ValueError("wave and second_wave cannot be null")
+    if scalar is None:
+        raise ValueError("scalar cannot be null")
+    return wave * (second_wave*scalar)
 
 
+def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+    """
+    Apply a Low Frequency Oscillator (LFO) to a sound wave.
 
-    #apply lfo
-    types = []
-    lfos = []
-    lfo_amount = int(round(1 + (5 - 1) * color_avg))
-    #lfo_amount = int(abs(np.mod(3, 5) * color_diff))
+    Parameters
+    ----------
+    sound : numpy array
+        The input sound wave to be modified.
+    color_average : float
+        The average color value of the image.
+    time : numpy array
+        The time array of the sound wave.
+    interpolate_red : numpy array
+        The interpolated red color channel of the image.
+    interpolate_green : numpy array
+        The interpolated green color channel of the image.
+    interpolate_blue : numpy array
+        The interpolated blue color channel of the image.
+    intensity : float, optional
+        The intensity of the LFO. Defaults to 1.
+    scalar_freq : float, optional
+        The frequency scalar of the LFO. Defaults to 1.
+    scalar_amplitude : float, optional
+        The amplitude scalar of the LFO. Defaults to 1.
+
+    Returns
+    -------
+    numpy array
+        The modified sound wave.
+    """
+    lfo_amount = int(round(1 + (5 - 1) * color_average))
     split_red = np.array_split(interpolate_red, lfo_amount)
     split_green = np.array_split(interpolate_green, lfo_amount)
     split_blue = np.array_split(interpolate_blue, lfo_amount)
 
-    for elm in range(lfo_amount):
-        segment_avg_red = np.mean(split_red[elm])
-        segment_avg_blue = np.mean(split_blue[elm])
-        segment_avg_green = np.mean(split_green[elm])
-        
-        max_val = np.max([segment_avg_red,segment_avg_blue,segment_avg_green])
-        min_val = np.min([segment_avg_red,segment_avg_blue,segment_avg_green])
+    lfo_frequencies = []
+    for i in range(lfo_amount):
+        segment_avg_red = np.mean(split_red[i])
+        segment_avg_green = np.mean(split_green[i])
+        segment_avg_blue = np.mean(split_blue[i])
+        max_val = np.max([segment_avg_red, segment_avg_green, segment_avg_blue])
+        min_val = np.min([segment_avg_red, segment_avg_green, segment_avg_blue])
 
         delta = max_val - min_val
         lightness = (max_val + min_val) / 2
 
         if delta == 0:
-            saturation = .01
+            saturation = 0.01
         else:
             if lightness < 0.5:
                 saturation = delta / (max_val + min_val)
             else:
                 saturation = delta / (2 - max_val - min_val)
-        
 
         if max_val == segment_avg_red:
-            types.append('square')
+            lfo_frequencies.append('square')
         elif max_val == segment_avg_blue:
-            types.append('sine')
+            lfo_frequencies.append('sine')
         else:
-            types.append('sawtooth') 
+            lfo_frequencies.append('sawtooth')
 
-    for i in range(lfo_amount):
-        lfo = apply_lfo(sound, color_avg+saturation, types[i], 1, time, interpolate_red, interpolate_green, interpolate_blue)
-        lfos.append(lfo)
-    final_lfo = np.ones_like(sound)
-    for i in range(len(lfos)):
-        final_lfo *= lfos[i]
+    lfo_sound = np.ones_like(sound)
+    for i in range(len(lfo_frequencies)):
+        if lfo_frequencies[i] == 'sine':
+            lfo_sound *= (interpolate_blue * scalar_amplitude) * np.sin(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+        elif lfo_frequencies[i] == 'square':
+            lfo_sound *= (interpolate_red * scalar_amplitude) * signal.square(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+        elif lfo_frequencies[i] == 'sawtooth':
+            lfo_sound *= (interpolate_green * scalar_amplitude) * signal.sawtooth(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
 
+    return multiply_wave(lfo_sound, sound)
 
-    return final_lfo * sound
+def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1):
+    """
+    Modify a base sound wave by applying overtones and a low frequency
+    oscillator (LFO).
+
+    Parameters
+    ----------
+    sound : numpy array
+        The input sound wave to be modified.
+    color_average : float
+        The average color value of the image.
+    overtone_type : str
+        The type of overtones to apply. Can be 'sine', 'square', or 'sawtooth'.
+    time : numpy array
+        The time array of the sound wave.
+    interpolate_red : numpy array
+        The interpolated red color channel of the image.
+    interpolate_green : numpy array
+        The interpolated green color channel of the image.
+    interpolate_blue : numpy array
+        The interpolated blue color channel of the image.
+    intensity : float, optional
+        The intensity of the LFO. Defaults to 1.
+    scalar_freq : float, optional
+        The frequency scalar of the LFO. Defaults to 1.
+    scalar_amplitude : float, optional
+        The amplitude scalar of the LFO. Defaults to 1.
+
+    Returns
+    -------
+    numpy array
+        The modified sound wave.
+    """
+    if sound is None:
+        raise ValueError('Input sound cannot be null')
+    if color_average is None:
+        raise ValueError('Input color_average cannot be null')
+    if overtone_type not in ['sine', 'square', 'sawtooth']:
+        raise ValueError('Invalid overtone_type. Must be "sine", "square", or "sawtooth"')
+    if time is None:
+        raise ValueError('Input time array cannot be null')
+    if interpolate_red is None or interpolate_green is None or interpolate_blue is None:
+        raise ValueError('Interpolated color channels cannot be null')
+
+    sound = apply_overtones(sound = sound, wave_type = overtone_type, time = time, base_freq=base_freq, brightness= brightness(rgb = (interpolate_red, interpolate_green, interpolate_blue)), rgb_dict = {'1': interpolate_red, '2': interpolate_green, '3': interpolate_blue})
+
+    # Apply LFO
+    sound = apply_lfo(sound = sound , color_average = color_average, time = time, interpolate_red=interpolate_red, interpolate_green=interpolate_green, interpolate_blue=interpolate_blue, intensity = intensity, scalar_freq = scalar_freq, scalar_amplitude = scalar_amplitude)
+
     return sound
-        
 
 
+def main_generation_handler(
+        img_path: str,
+        out_path: str,
+        kernel_size: int,
+        step_size: int,
+        sound_level: int,
+        sample_rate: int,
+        sound_duration: int,
+        modulation_duration: int,
+        modulation_intensity: float,
+        modulation_envelope_intensity: float,
 
-
-
-def multiply_wave(wave, second_wave, scalar=1):
-
-
-    return wave * (second_wave*scalar)
-
-
-def generate_audio_nosplit(arrays, out_path):
-    sample_rate = 44800
-
-    for i in range(len(arrays)):
-
-        array_radian = np.radians(arrays[i])
-        
-        # Generate sine and cosine wave
-        array_sine = np.sin(array_radian)
-        array_cosine = np.cos(array_radian)
-        array_square = np.square(array_sine)
-        
-        # Combine sine and cosine to add variety
-        combined_wave = array_sine + 0.5 * array_cosine
-        
-
-        # Normalize the combined wave to the range of int16 (to avoid distortion)
-        max_value = np.max(np.abs(combined_wave))
-        if max_value != 0:
-            combined_wave_normalized = combined_wave / max_value
-        else:
-            combined_wave_normalized = combined_wave  
-
-        # Convert the normalized wave to int16
-        combined_wave_int16 = np.int16(combined_wave_normalized * 32767) 
-        sine_wave_int16 = np.int16(array_sine * 32767) 
-        cosine_wave_int16 = np.int16(array_cosine * 32767)  
-        square_wave_int16 = np.int16(array_square * 32767) 
-
-        # Saving files to disk
-        scipy.io.wavfile.write(out_path + "output_combined_" + str(i) + ".wav", sample_rate, combined_wave_int16)
-        scipy.io.wavfile.write(out_path + "output_sine_" + str(i) + ".wav", sample_rate, sine_wave_int16)
-        scipy.io.wavfile.write(out_path + "output_cosine_" + str(i) + ".wav", sample_rate, cosine_wave_int16)
-        scipy.io.wavfile.write(out_path + "output_square_" + str(i) + ".wav", sample_rate, square_wave_int16)
-
-    print("Generated audio files")
-
-def imagetoaudio(img_path, out_path, kernel_size, step_size):
-    Images = []
-    file_names = []
-    rerun = False
-    if not os.path.isdir(out_path):
-        rerun = True
-        os.makedirs(out_path)
-
+        lfo_scalar_freq: float,
+        lfo_scalar_amplitude: float,
+        lfo_intensity: float
+):
     
-    if not os.path.isdir(img_path):
-        os.makedirs(img_path)
-        rerun = True
+    
+    #check if img_path is single file or folder, accept any img file path
+    """
+    Handles image to audio conversion, given an image path, output path, and conversion parameters
 
-    if rerun:
-        print("Error: First run detected, paths created,restart needed")
-        exit()
+    Parameters
+    ----------
+    img_path: str
+        path to the image file or folder containing image files
+    out_path: str
+        path to the output folder where the audio files will be saved
+    kernel_size: int
+        size of the convolution kernel
+    step_size: int
+        step size for the convolution
+    sound_level: int
+        level of the sound (0-100)
+    sample_rate: int
+        sample rate of the audio
+    sound_duration: int
+        duration of the sound in seconds
+    modulation_intensity: float
+        intensity of the modulation (0-1)
+    modulation_envelope_intensity: float
+        intensity of the modulation envelope (0-1)
+    lfo_scalar_freq: float
+        scalar frequency for the LFO
+    lfo_scalar_amplitude: float
+        scalar amplitude for the LFO
+    lfo_intensity: float
+        intensity of the LFO (0-1)
+
+    Returns
+    -------
+    None
+    """
+    if os.path.isdir(img_path):
+        image_files = glob.glob(os.path.join(img_path, "*.jpg")) + glob.glob(os.path.join(img_path, "*.png"))
         
-    # Iterate over all .jpg files in the specified directory
-    for file in glob.glob(img_path + "*.jpg"):
-        # Extract the file name without extension
-        file_name = os.path.splitext(os.path.basename(file))[0]
-        file_names.append(file_name)
-        
-        # Open and process the image
-        img = Image.open(file)
-        img = img.convert('RGB')
-        width, height = img.size
-        aspect_ratio = width / height
-        img = img.resize((int(aspect_ratio * 1024), 1024))  # Resize with consistent height
-        img_array = np.asarray(img)
+        images = []
+        file_names = []
 
-        Images.append(img_array)
-        print(f"Processing image: {file_name}, Shape: {img_array.shape}")
+        print("Processing image batch...")
+        for file in image_files:
+            file_name = os.path.splitext(os.path.basename(file))[0]
+            print("Processing image: "+file_name)
+            file_names.append(file_name)
+            img = Image.open(file)
+            img = img.convert('RGB')
+            img_array = np.asarray(img)
+            
+            #check if image dimensions are greater than 3840*2160
+            if img_array.shape[0] > 3840 or img_array.shape[1] > 2160:
+                print("Error: Image dimensions are greater than 3840*2160, resizing to 3840*2160")
+                img = img.resize((3840, 2160))
+                img_array = np.asarray(img)
 
-    # Pass the image file name along with the image array
-    for i in range(len(Images)):
-        print(f"Convolving image {file_names[i]} with Kernel Size {kernel_size} and Step Size {step_size}")
-        rgb_dict = convolve_rgb(Images[i], kernel_size, step_size, )  
-        generate_sound_v3(rgb_dict=rgb_dict, out_path=out_path+"audionew/", level=.5, file_name=file_names[i],sample_rate=48000)
-        # generate_audio_1(rgb_dict=rgb_dict,out_path=out_path+"audioold/", intensity=.9, file_name=file_names[i])
-              
+            images.append(img_array)
+
+        print("Convolving image batch...")
+        for n in range(len(images)):
+            print("Convolving image: "+file_names[n])
+
+            rgb_dict = image_convolution(images[n], kernel_size, step_size)
+
+            generate_sound(rgb_dict = rgb_dict, 
+                out_path = out_path,
+                sound_level = sound_level,
+                sample_rate = sample_rate,
+                sound_duration = sound_duration,
+                modulation_intensity = modulation_intensity,
+                modulation_envelope_intensity = modulation_envelope_intensity,
+                modulation_duration = modulation_duration,
+                lfo_scalar_freq = lfo_scalar_freq,
+                lfo_scalar_amplitude = lfo_scalar_amplitude,
+                lfo_intensity = lfo_intensity,
+                file_name=file_names[n]
+
+            )
+            print("Audio generated for: "+file_names[n])
+
+    else:
+        image = Image.open(img_path)
+        image = image.convert('RGB')
+        image_array = np.asarray(image)
+
+        #check if image dimensions are greater than 3840*2160
+        if image_array.shape[0] > 3840 or image_array.shape[1] > 2160:
+            print("Error: Image dimensions are greater than 3840*2160, resizing to 3840*2160")
+            file_name = os.path.splitext(os.path.basename(img_path))[0]
+            image = image.resize((3840, 2160))
+            image_array = np.asarray(image)
+
+        print("Convolving image: "+file_name)
+        rgb_dict = image_convolution(image_array, kernel_size, step_size)
+
+        generate_sound(rgb_dict = rgb_dict, 
+            out_path = out_path,
+            sound_level = sound_level,
+            sample_rate = sample_rate,
+            sound_duration = sound_duration,
+            modulation_intensity = modulation_intensity,
+            modulation_envelope_intensity = modulation_envelope_intensity,
+            modulation_duration = modulation_duration,
+            lfo_scalar_freq = lfo_scalar_freq,
+            lfo_scalar_amplitude = lfo_scalar_amplitude,
+            lfo_intensity = lfo_intensity,
+            file_name=file_name
+        )
+        print("Audio generated for: "+file_name)
+
+    pass
 
 
 
-    print("Finished")
-        #convolve(Images[i], out_path, kernel_size, step_size)
-        # convolution_results.append(results)
 
-
-
-    # generate_audio_nosplit(convolution_results, out_path)
-
-    print("Finished")
-    return 
 
 
 if __name__ == "__main__":
-    
-    """
-    Converts an image to an audio file
-    args:
-    img_path
-    out_path (optional)
-    """
+
+
+
 
     debug = True
 
     if not debug:
         img_path = sys.argv[1]
         out_path = sys.argv[2] if len(sys.argv) > 2 else None
-        kernel_size = int(sys.argv[3]) if len(sys.argv) > 3 else 2
-        step_size = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+        kernel_size = int(sys.argv[3]) if len(sys.argv) > 3 else 10
+        step_size = int(sys.argv[4]) if len(sys.argv) > 4 else 2
+        sound_level = int(sys.argv[5]) if len(sys.argv) > 5 else 1
+        sample_rate = int(sys.argv[6]) if len(sys.argv) > 6 else 44800
+        sound_duration = int(sys.argv[7]) if len(sys.argv) > 7 else 6
+        modulation_intensity = float(sys.argv[8]) if len(sys.argv) > 8 else 0.4
+        modulation_envelope_intensity = float(sys.argv[9]) if len(sys.argv) > 9 else 0.8
+        modulation_duration = int(sys.argv[10]) if len(sys.argv) > 10 else 6
+        lfo_scalar_freq = float(sys.argv[11]) if len(sys.argv) > 11 else 1
+        lfo_scalar_amplitude = float(sys.argv[12]) if len(sys.argv) > 12 else 1
+        lfo_intensity = float(sys.argv[13]) if len(sys.argv) > 13 else 1 
 
-        print("args:", img_path, out_path, kernel_size, step_size)
 
-        imagetoaudio(img_path, out_path, kernel_size, step_size)
+        main_generation_handler(
+            img_path= img_path,
+            out_path = out_path,
+            kernel_size = kernel_size,
+            step_size = step_size,
+            sound_level = sound_level,
+            sample_rate = sample_rate,
+            sound_duration = sound_duration,
+            modulation_intensity =  modulation_intensity,
+            modulation_envelope_intensity = modulation_envelope_intensity,
+            modulation_duration = modulation_duration,
+            lfo_scalar_freq = lfo_scalar_freq,
+            lfo_scalar_amplitude = lfo_scalar_amplitude,
+            lfo_intensity = lfo_intensity
+        )
 
     else:
         img_path = os.getcwd() + "/imgs/"
         out_path = os.getcwd() + "/output/"
         kernel_size = 20
         step_size = 10
-        imagetoaudio(img_path, out_path, kernel_size, step_size)
-
-        print("Done")
+        sound_level = 1
+        sample_rate = 44800
+        sound_duration = 6
+        modulation_intensity = 0.4
+        modulation_envelope_intensity = 0.8
+        modulation_duration = 6
+        lfo_scalar_freq = 1
+        lfo_scalar_amplitude = 1
+        lfo_intensity = 1
+        main_generation_handler(
+            img_path= img_path,
+            out_path = out_path,
+            kernel_size = kernel_size,
+            step_size = step_size,
+            sound_level = sound_level,
+            sample_rate = sample_rate,
+            sound_duration = sound_duration,
+            modulation_intensity =  modulation_intensity,
+            modulation_envelope_intensity = modulation_envelope_intensity,
+            modulation_duration = modulation_duration,
+            lfo_scalar_freq = lfo_scalar_freq,
+            lfo_scalar_amplitude = lfo_scalar_amplitude,
+            lfo_intensity = lfo_intensity
+        )
