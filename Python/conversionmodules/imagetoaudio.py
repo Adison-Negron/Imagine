@@ -6,9 +6,9 @@ from PIL import Image
 from scipy import signal
 import math
 import scipy
-from line_profiler import profile
 
-@profile
+
+
 def image_convolution(image, kernel_size, step_size):
     """
     Compute the average RGB values for each channel
@@ -62,7 +62,7 @@ def image_convolution(image, kernel_size, step_size):
             rgb_dict['3'].append(avg_blue)
     return rgb_dict
 
-@profile
+
 def interpolate_rgb_array(array, target_length):
     """
     Interpolates an array of RGB values to a target length.
@@ -87,7 +87,7 @@ def interpolate_rgb_array(array, target_length):
     return np.interp(np.linspace(0, len(array) - 1, target_length), 
                      np.arange(len(array)), array)
 
-@profile
+
 def modulate_frequency(wave_type, base_time, array, base_frequency, 
                        modulation_duration=6, modulation_intensity=0.4, envelope_intensity=1.0,intensity = .8):
     """
@@ -122,7 +122,7 @@ def modulate_frequency(wave_type, base_time, array, base_frequency,
     return modulated_wave * intensity  # Adjust overall wave amplitude
 
 
-@profile
+#
 def generate_sound(
     rgb_dict,
     out_path,
@@ -231,7 +231,7 @@ def generate_sound(
         print(f"Error writing to file: {e}")
 
 
-@profile
+#
 def color_avg(r, g, b):
     """
     Calculate the average of the given RGB values.
@@ -251,7 +251,7 @@ def color_avg(r, g, b):
     return np.mean([r, g, b])
 
 
-@profile
+#
 def color_diff(r, g, b):
     
     """
@@ -271,7 +271,7 @@ def color_diff(r, g, b):
         raise ValueError('RGB values cannot be null')
     return r - g - b
 
-@profile
+#
 def calculate_overtone_frequencies(base_freq, num, type):
     """
     Calculate the overtone frequencies based on the given parameters.
@@ -301,7 +301,7 @@ def calculate_overtone_frequencies(base_freq, num, type):
 
     return frequencies
 
-@profile
+#
 def map_to_range_with_variability(x, input_min, input_max, output_min=0.2, output_max=30, variability_factor=2):
     # Clamp the input value to ensure it's within the expected range
     """
@@ -357,7 +357,7 @@ def map_to_range_with_variability(x, input_min, input_max, output_min=0.2, outpu
     # Linearly map the variable value to the output range
     return output_min + (output_max - output_min) * variable_value
 
-@profile
+#
 def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time,overtone_num_scalar=1):
     """
     Apply overtones to a sound based on an image's characteristics.
@@ -401,7 +401,7 @@ def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time,over
     # Calculate intensity adjustment factor based on brightness
     intensity_scale = 0.5 + (0.8 * brightness)  # Intensity scale varies with brightness
 
-    @profile
+    #
     def calculate_intensity(n, total_overtones):
         # Intensity is scaled between 0 and 1 based on position and seed value
         base_intensity = .7 - (n / total_overtones)  # Decreases linearly from 1 to 0
@@ -435,11 +435,11 @@ def apply_overtones(sound, wave_type, base_freq, brightness, rgb_dict, time,over
 
     return sound
 
-@profile
+#
 def brightness(rgb):
     return np.mean(rgb)
 
-@profile
+#
 def multiply_wave(wave, second_wave, scalar=1):
     """
     Multiply two waves together with an optional scalar factor.
@@ -464,7 +464,7 @@ def multiply_wave(wave, second_wave, scalar=1):
         raise ValueError("scalar cannot be null")
     return wave * (second_wave*scalar)
 
-@profile
+#
 def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1,lfo_amount_scalar=1):
     """
     Apply a Low Frequency Oscillator (LFO) to a sound wave.
@@ -537,7 +537,7 @@ def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, in
 
     return multiply_wave(lfo_sound, sound)
 
-@profile
+#
 def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1,overtone_num_scalar=1,lfo_amount_scalar = 1):
     """
     Modify a base sound wave by applying overtones and a low frequency
@@ -589,7 +589,7 @@ def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interp
 
     return sound
 
-@profile
+#
 def main_generation_handler(
         img_path: str,
         out_path: str,
@@ -778,16 +778,16 @@ if __name__ == "__main__":
         out_path = os.getcwd() + "/output/"
         kernel_size = 20
         step_size = 10
-        sound_level = 1
+        sound_level = .8
         sample_rate = 44800
         sound_duration = 6
-        modulation_intensity = .8
-        modulation_envelope_intensity = 0.2
+        modulation_intensity = .1
+        modulation_envelope_intensity = 0.8
         modulation_duration = 6
         lfo_scalar_freq = .6
         lfo_scalar_amplitude = 1
-        lfo_intensity = 1
-        overtone_num_scalar = 3
+        lfo_intensity = .8
+        overtone_num_scalar = 1
         lfo_amount_scalar = 1
 
 
