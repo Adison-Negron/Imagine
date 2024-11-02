@@ -9,6 +9,14 @@
 #pragma once
 
 #include <JuceHeader.h>
+#ifdef _DEBUG
+#undef _DEBUG
+#include <python.h>
+#define _DEBUG
+#else
+#include <python.h>
+#endif
+
 
 //==============================================================================
 /**
@@ -52,6 +60,23 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+
+    void callPythonFunction(const std::string& img_path,
+        const std::string& out_path,
+        int kernel_size,
+        int step_size,
+        int sound_level,
+        int sample_rate,
+        int sound_duration,
+        int modulation_duration,
+        float modulation_intensity,
+        float modulation_envelope_intensity,
+        float overtone_num_scalar,
+        float lfo_scalar_freq,
+        float lfo_scalar_amplitude,
+        float lfo_intensity,
+        float lfo_amount_scalar);
+    std::string pythonScriptPath; // Path to the directory containing the script
 
 private:
     //==============================================================================

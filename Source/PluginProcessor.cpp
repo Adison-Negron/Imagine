@@ -19,9 +19,16 @@ ImagineAudioProcessor::ImagineAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
+                    pythonScriptPath("C:/Users/minec/OneDrive/Desktop/Imagine/Python/conversionmodules/")
 #endif
 {
+    // Initialize Python interpreter
+    Py_Initialize();
+
+    // Add the script path to PYTHONPATH
+    PyObject* sysPath = PySys_GetObject("path");
+    PyList_Append(sysPath, PyUnicode_DecodeFSDefault(pythonScriptPath.c_str()));
 }
 
 ImagineAudioProcessor::~ImagineAudioProcessor()
@@ -188,4 +195,98 @@ void ImagineAudioProcessor::setStateInformation (const void* data, int sizeInByt
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new ImagineAudioProcessor();
+}
+
+
+void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
+    const std::string& out_path,
+    int kernel_size,
+    int step_size,
+    int sound_level,
+    int sample_rate,
+    int sound_duration,
+    int modulation_duration,
+    float modulation_intensity,
+    float modulation_envelope_intensity,
+    float overtone_num_scalar,
+    float lfo_scalar_freq,
+    float lfo_scalar_amplitude,
+    float lfo_intensity,
+    float lfo_amount_scalar)
+{
+    PyObject* pName, * pModule, *pDict, * pFunc, * pArgs, * pValue;
+
+    // Set the Python script name (without the .py extension)
+    pName = PyUnicode_FromString("imagetoaudio"); // Replace with your actual script name
+
+    // Import the Python module
+    pModule = PyImport_Import(pName);
+
+
+    Py_DECREF(pName);
+
+    if (pModule != nullptr)
+    {
+        // Get the function from the module
+        //pDict = PyModule_GetDict(pModule);
+        //pFunc = PyDict_GetItemString(pDict,"main_generation_handler");
+        pFunc = PyObject_GetAttrString(pModule,(char*) "main_generation_handler");
+
+        // Check if the function is callable
+        if (pFunc && PyCallable_Check(pFunc))
+        {
+            // Create the arguments for the Python function
+            PyObject* pArgs = PyTuple_Pack(15,
+                PyUnicode_FromString(img_path.c_str()),
+                PyUnicode_FromString(out_path.c_str()),
+                PyLong_FromLong(kernel_size),
+                PyLong_FromLong(step_size),
+                PyLong_FromLong(sound_level),
+                PyLong_FromLong(sample_rate),
+                PyLong_FromLong(sound_duration),
+                PyLong_FromLong(modulation_duration),
+                PyFloat_FromDouble(modulation_intensity),
+                PyFloat_FromDouble(modulation_envelope_intensity),
+                PyFloat_FromDouble(overtone_num_scalar),
+                PyFloat_FromDouble(lfo_scalar_freq),
+                PyFloat_FromDouble(lfo_scalar_amplitude),
+                PyFloat_FromDouble(lfo_intensity),
+                PyFloat_FromDouble(lfo_amount_scalar)
+            );
+
+            // Call the function
+            pValue = PyObject_CallObject(pFunc, pArgs);
+            double pOut = PyFloat_AsDouble(pValue);
+
+            if (pValue != nullptr)
+            {
+                // Print the return value
+                juce::Logger::outputDebugString(PyUnicode_AsUTF8(pValue));
+                Py_DECREF(pValue);
+            }
+            else
+            {
+                Py_DECREF(pFunc);
+                Py_DECREF(pModule);
+                Py_DECREF(pArgs);
+                PyErr_Print();
+                juce::Logger::outputDebugString("Call to Python function failed");
+                return;
+            }
+            Py_DECREF(pArgs);
+        }
+        else
+        {
+            if (PyErr_Occurred())
+                PyErr_Print();
+            juce::Logger::outputDebugString("Cannot find function main_generation_handler");
+        }
+        Py_XDECREF(pFunc);
+        Py_DECREF(pModule);
+    }
+    else
+    {
+        PyErr_Print();
+        juce::Logger::outputDebugString("Failed to load your_script_name");
+    }
 }
