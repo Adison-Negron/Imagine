@@ -98,8 +98,8 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
     imgsPath = imgsFolder.getFullPathName().toStdString();
     outputPath = outputFolder.getFullPathName().toStdString() + "\\";
     
-    deleteFiles(imgsFolder);
-    deleteFiles(outputFolder);
+    //deleteFiles(imgsFolder);
+    //deleteFiles(outputFolder);
 
     for (const auto& file : files)
     {

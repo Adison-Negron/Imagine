@@ -33,21 +33,31 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 
 #endif
 {
-    // Initialize Python interpreter
     Py_Initialize();
-    std::string root = fs::current_path().string();
-    int start_position = root.find("Imagine") + 8;
-    root.erase(start_position);
-    std::string pythonpath = root + "Python\\conversionmodules\\";
+    currentPath = juce::File::getCurrentWorkingDirectory();
+    root = currentPath;
 
+    while (root.exists() && !root.getFileName().equalsIgnoreCase("Imagine"))
+    {
+        root = root.getParentDirectory();
+    }
 
-        // Add the script path to PYTHONPATH
-    PyObject * sysPath = PySys_GetObject("path");
-    PyList_Append(sysPath, PyUnicode_DecodeFSDefault(pythonpath.c_str()));
+    if (root.getFileName().equalsIgnoreCase("Imagine"))
+    {
+        juce::File pythonScriptDir = root.getChildFile("Python/conversionmodules");
+        pythonpath = pythonScriptDir.getFullPathName().toStdString();
+
+        PyObject* sysPath = PySys_GetObject("path");
+        if (sysPath && PyList_Check(sysPath)) {
+            PyObject* pyPath = PyUnicode_FromString(pythonpath.c_str());
+            PyList_Append(sysPath, pyPath);
+            Py_DECREF(pyPath);
+        }
+    }
 }
-
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
+    Py_Finalize();
 }
 
 //==============================================================================

@@ -77,6 +77,8 @@ public:
         float lfo_intensity,
         float lfo_amount_scalar);
     std::string pythonpath; 
+    juce::File currentPath;
+    juce::File root;
 
 private:
     //==============================================================================
