@@ -8,27 +8,42 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <string>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 //==============================================================================
 ImagineAudioProcessor::ImagineAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       ),
-                    pythonScriptPath("C:/Users/minec/OneDrive/Desktop/Imagine/Python/conversionmodules/")
+
+
+    : AudioProcessor(BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+        .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+        .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+    )
+
+
+
+
+
 #endif
 {
     // Initialize Python interpreter
     Py_Initialize();
+    std::string root = fs::current_path().string();
+    int start_position = root.find("Imagine") + 8;
+    root.erase(start_position);
+    std::string pythonpath = root + "Python\\conversionmodules\\";
 
-    // Add the script path to PYTHONPATH
-    PyObject* sysPath = PySys_GetObject("path");
-    PyList_Append(sysPath, PyUnicode_DecodeFSDefault(pythonScriptPath.c_str()));
+
+        // Add the script path to PYTHONPATH
+    PyObject * sysPath = PySys_GetObject("path");
+    PyList_Append(sysPath, PyUnicode_DecodeFSDefault(pythonpath.c_str()));
 }
 
 ImagineAudioProcessor::~ImagineAudioProcessor()
@@ -216,8 +231,8 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
 {
     PyObject* pName, * pModule, *pDict, * pFunc, * pArgs, * pValue;
 
-    // Set the Python script name (without the .py extension)
-    pName = PyUnicode_FromString("imagetoaudio"); // Replace with your actual script name
+    // Set the Python script name 
+    pName = PyUnicode_FromString("imagetoaudio");
 
     // Import the Python module
     pModule = PyImport_Import(pName);
@@ -228,8 +243,6 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
     if (pModule != nullptr)
     {
         // Get the function from the module
-        //pDict = PyModule_GetDict(pModule);
-        //pFunc = PyDict_GetItemString(pDict,"main_generation_handler");
         pFunc = PyObject_GetAttrString(pModule,(char*) "main_generation_handler");
 
         // Check if the function is callable
@@ -287,6 +300,6 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
     else
     {
         PyErr_Print();
-        juce::Logger::outputDebugString("Failed to load your_script_name");
+        juce::Logger::outputDebugString("Failed to load");
     }
 }

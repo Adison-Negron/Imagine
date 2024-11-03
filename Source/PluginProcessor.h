@@ -72,11 +72,11 @@ public:
         float modulation_intensity,
         float modulation_envelope_intensity,
         float overtone_num_scalar,
-        float lfo_scalar_freq,
+        float lfo_scalar_freq, 
         float lfo_scalar_amplitude,
         float lfo_intensity,
         float lfo_amount_scalar);
-    std::string pythonScriptPath; // Path to the directory containing the script
+    std::string pythonpath; 
 
 private:
     //==============================================================================

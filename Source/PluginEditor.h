@@ -10,6 +10,10 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include <string>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 //==============================================================================
 /**
@@ -26,22 +30,44 @@ public:
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
-    void saveImageFile(const juce::File& imageFile);
 
 
+    
+    juce::File documentsDir;
+    juce::File mainFolder;
+    juce::File imgsFolder;
+    juce::File outputFolder;
+    std::string imgsPath;
+    std::string outputPath;
+
+    void deleteFiles(const juce::File& folder);
+
+    enum TransportState
+    {
+        Starting,
+        Stopping
+    };
 
     juce::AudioFormatManager formatManager;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioTransportSource transportSource;
+    juce::AudioSourcePlayer audioSourcePlayer;
+    juce::AudioDeviceManager deviceManager;
+
     juce::TextButton playButton{ "Play" };
-    juce::Label filePathLabel;
+    juce::TextButton stopButton{ "Stop" };
+
     void playButtonClicked();
+    void stopButtonClicked();
+    void changeState(TransportState newState);
+    TransportState state;
+    void playWavFile();
 
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     ImagineAudioProcessor& audioProcessor;
-    juce::TextButton runButton{ "YES" };
+    juce::File createFolderIfNotExists(const juce::File& parentFolder, const std::string& folderName);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
 };
