@@ -699,10 +699,9 @@ def main_generation_handler(
         #check if image dimensions are greater than 3840*2160
         if image_array.shape[0] > 3840 or image_array.shape[1] > 2160:
             print("Error: Image dimensions are greater than 3840*2160, resizing to 3840*2160")
-            file_name = os.path.splitext(os.path.basename(img_path))[0]
             image = image.resize((3840, 2160))
             image_array = np.asarray(image)
-
+        file_name = os.path.splitext(os.path.basename(img_path))[0]
         print("Convolving image: "+file_name)
         rgb_dict = image_convolution(image_array, kernel_size, step_size)
 
@@ -774,7 +773,7 @@ if __name__ == "__main__":
         )
 
     else:
-        img_path = os.getcwd() + "/imgs/"
+        img_path = os.getcwd() + "/imgs/test5.jpg"
         out_path = os.getcwd() + "/output/"
         kernel_size = 20
         step_size = 10
