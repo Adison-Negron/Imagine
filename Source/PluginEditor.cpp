@@ -90,24 +90,7 @@ void ImagineAudioProcessorEditor::addSlider(juce::Slider& slider, juce::Label& l
 
 void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
-    deleteFiles(outputFolder);
-    audioProcessor.callPythonFunction(
-        imgsPath,
-        outputPath,
-        kernel.getValue(),
-        step.getValue(),
-        sound_level.getValue(),
-        sample_rate.getValue(),
-        sound_duration.getValue(),
-        modulation_intensity.getValue(),
-        modulation_envelope_intensity.getValue(),
-        modulation_duration.getValue(),
-        lfo_scalar_freq.getValue(),
-        lfo_scalar_amplitude.getValue(),
-        lfo_intensity.getValue(),
-        overtone_num_scalar.getValue(),
-        lfo_amount_scalar.getValue()
-    );
+
 }
 
 //==============================================================================
@@ -186,9 +169,7 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
 
     documentsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
     mainFolder = createFolderIfNotExists(documentsDir, "Imagine");
-    imgsFolder = createFolderIfNotExists(mainFolder, "imgs");
     outputFolder = createFolderIfNotExists(mainFolder, "output");
-    imgsPath = imgsFolder.getFullPathName().toStdString() + "\\";
     outputPath = outputFolder.getFullPathName().toStdString() + "\\";
     
     //deleteFiles(imgsFolder);
@@ -196,13 +177,10 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
 
     for (const auto& file : files)
     {
-        DBG("Dropped file: " << file);
         juce::File imageFile(file);
+        std::string imagePath = imageFile.getFullPathName().toStdString();
 
-        if (imageFile.copyFileTo(imgsFolder.getChildFile(imageFile.getFileName())))
-        {
-            DBG("File saved to " << imgsFolder.getChildFile(imageFile.getFileName()).getFullPathName());
-            audioProcessor.callPythonFunction(imgsPath,
+            audioProcessor.callPythonFunction(imagePath,
                 outputPath,
                 kernel.getValue(),
                 step.getValue(),
@@ -217,11 +195,7 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
                 lfo_intensity.getValue(),
                 overtone_num_scalar.getValue(),
                 lfo_amount_scalar.getValue());
-        }
-        else
-        {
-            DBG("Failed to save file.");
-        }
+
     }
 }
 

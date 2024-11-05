@@ -64,6 +64,16 @@ public:
     void playWavFile();
     void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default);
 
+    juce::File getImageFile()
+    {
+        return this->imageFile;
+    }
+
+    juce::File setImageFile(juce::File imageFile)
+    {
+        this->imageFile = imageFile;
+    }
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
@@ -76,6 +86,7 @@ private:
         envelope_intensity_label, overtone_num_label, lfo_freq_label , lfo_amplitude_label, lfo_intensity_label, lfo_amount_label;
 
     void sliderValueChanged(juce::Slider* slider) override;
+    juce::File imageFile;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
 };
