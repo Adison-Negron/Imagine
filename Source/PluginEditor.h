@@ -12,13 +12,16 @@
 #include "PluginProcessor.h"
 #include <string>
 #include <filesystem>
+#include "SliderWindow.h"
 
 namespace fs = std::filesystem;
+
+class SliderWindow;
 
 //==============================================================================
 /**
 */
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener
+class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget
 {
 public:
     ImagineAudioProcessorEditor (ImagineAudioProcessor&);
@@ -66,7 +69,7 @@ public:
     void changeState(TransportState newState);
     TransportState state;
     void playWavFile();
-    void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default);
+
 
     juce::File getImageFile()
     {
@@ -78,19 +81,22 @@ public:
         this->imageFile = imageFile;
     }
 
+    void generateSound();
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     ImagineAudioProcessor& audioProcessor;
     juce::File createFolderIfNotExists(const juce::File& parentFolder, const std::string& folderName);
 
-    juce::Slider kernel, step, sound_level, sample_rate, sound_duration, modulation_duration, modulation_intensity,
-        modulation_envelope_intensity, overtone_num_scalar, lfo_scalar_freq, lfo_scalar_amplitude, lfo_intensity, lfo_amount_scalar;
-    juce::Label kernel_label, step_label, sound_label, sample_label, duration_label, modulation_duration_label, modulation_intensity_label,
-        envelope_intensity_label, overtone_num_label, lfo_freq_label , lfo_amplitude_label, lfo_intensity_label, lfo_amount_label;
 
-    void sliderValueChanged(juce::Slider* slider) override;
+
     juce::File imageFile;
+    SliderWindow* windowComponent;
+    std::string imagePath;
+
+    std::unique_ptr<juce::DocumentWindow> slider_window;
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
 };
