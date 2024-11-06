@@ -79,8 +79,11 @@ public:
     std::string pythonpath; 
     juce::File currentPath;
     juce::File root;
+    juce::File outputpath;
 
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessor)
+
+
 };

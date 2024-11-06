@@ -172,9 +172,6 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
     outputFolder = createFolderIfNotExists(mainFolder, "output");
     outputPath = outputFolder.getFullPathName().toStdString() + "\\";
     
-    //deleteFiles(imgsFolder);
-    //deleteFiles(outputFolder);
-
     for (const auto& file : files)
     {
         juce::File imageFile(file);
@@ -235,23 +232,18 @@ void ImagineAudioProcessorEditor::stopButtonClicked()
 
 void ImagineAudioProcessorEditor::playWavFile()
 {
-    juce::DirectoryIterator iter(outputFolder, false, "*.wav", juce::File::findFiles);
+    juce::File wavFile = audioProcessor.outputpath;
 
-    if (iter.next())
+    if (wavFile.existsAsFile())
     {
-        juce::File wavFile = iter.getFile();
+        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(wavFile));
 
-        if (wavFile.existsAsFile())
+        if (reader != nullptr)
         {
-            std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(wavFile));
-
-            if (reader != nullptr)
-            {
-                std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader.release(), true));
-                transportSource.setSource(newSource.get(), 0, nullptr, 44800);
-                readerSource.reset(newSource.release());
-                transportSource.start();
-            }
+            std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader.release(), true));
+            transportSource.setSource(newSource.get(), 0, nullptr, 44800);
+            readerSource.reset(newSource.release());
+            transportSource.start();
         }
     }
 }

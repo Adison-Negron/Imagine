@@ -230,6 +230,8 @@ def generate_sound(
     except Exception as e:
         print(f"Error writing to file: {e}")
 
+    return output_file_name
+
 
 #
 def color_avg(r, g, b):
@@ -673,7 +675,7 @@ def main_generation_handler(
 
             rgb_dict = image_convolution(images[n], kernel_size, step_size)
 
-            generate_sound(rgb_dict = rgb_dict, 
+            output_path = generate_sound(rgb_dict = rgb_dict, 
                 out_path = out_path,
                 sound_level = sound_level,
                 sample_rate = sample_rate,
@@ -705,7 +707,7 @@ def main_generation_handler(
         print("Convolving image: "+file_name)
         rgb_dict = image_convolution(image_array, kernel_size, step_size)
 
-        generate_sound(rgb_dict = rgb_dict, 
+        output_path = generate_sound(rgb_dict = rgb_dict, 
             out_path = out_path,
             sound_level = sound_level,
             sample_rate = sample_rate,
@@ -722,7 +724,7 @@ def main_generation_handler(
         )
         print("Audio generated for: "+file_name)
 
-    pass
+    return output_path
 
 
 

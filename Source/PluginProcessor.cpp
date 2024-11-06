@@ -278,14 +278,26 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
             );
 
             // Call the function
-            pValue = PyObject_CallObject(pFunc, pArgs);
-            double pOut = PyFloat_AsDouble(pValue);
+            PyObject* pValue = PyObject_CallObject(pFunc, pArgs);
+            
 
             if (pValue != nullptr)
             {
-                // Print the return value
-                juce::Logger::outputDebugString(PyUnicode_AsUTF8(pValue));
-                Py_DECREF(pValue);
+                if (PyUnicode_Check(pValue)) // Ensure the return type is a string
+                {
+                    const char* resultCStr = PyUnicode_AsUTF8(pValue);
+                    std::string resultStr = resultCStr;  // Convert to std::string if needed
+                    juce::Logger::outputDebugString("Returned string from Python: " + resultStr);
+                    this->outputpath = resultCStr;
+                    // Optionally, use resultStr as needed here in your C++ code
+                    
+                }
+                else
+                {
+                    juce::Logger::outputDebugString("Error: Python function did not return a string.");
+                }
+
+                Py_DECREF(pValue); // Release the Python object
             }
             else
             {

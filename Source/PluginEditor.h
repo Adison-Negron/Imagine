@@ -57,6 +57,10 @@ public:
     juce::TextButton playButton{ "Play" };
     juce::TextButton stopButton{ "Stop" };
 
+
+    juce::GroupComponent generation_sliders;
+
+
     void playButtonClicked();
     void stopButtonClicked();
     void changeState(TransportState newState);
