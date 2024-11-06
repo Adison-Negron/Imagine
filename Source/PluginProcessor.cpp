@@ -33,6 +33,15 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 
 #endif
 {
+    mFormatManager.registerBasicFormats();
+    for (int i = 0; i < mNumVoices; i++) {
+
+        mSampler.addVoice(new juce::SamplerVoice());
+
+    }
+    
+
+
     Py_Initialize();
     currentPath = juce::File::getCurrentWorkingDirectory();
     root = currentPath;
@@ -58,6 +67,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
     Py_Finalize();
+    this->mFormatReader = nullptr;
 }
 
 //==============================================================================
@@ -127,6 +137,7 @@ void ImagineAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    mSampler.setCurrentPlaybackSampleRate(sampleRate);
 }
 
 void ImagineAudioProcessor::releaseResources()
@@ -176,18 +187,7 @@ void ImagineAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
+    mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 }
 
 //==============================================================================
@@ -228,7 +228,7 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
     int kernel_size,
     int step_size,
     int sound_level,
-    int sample_rate,
+    double sampleRate,
     int sound_duration,
     int modulation_duration,
     float modulation_intensity,
@@ -264,8 +264,8 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
                 PyUnicode_FromString(out_path.c_str()),
                 PyLong_FromLong(kernel_size),
                 PyLong_FromLong(step_size),
-                PyLong_FromLong(sound_level),
-                PyLong_FromLong(sample_rate),
+                PyLong_FromLong(sound_level), 
+                PyLong_FromLong(sampleRate),
                 PyLong_FromLong(sound_duration),
                 PyLong_FromLong(modulation_duration),
                 PyFloat_FromDouble(modulation_intensity),
@@ -289,6 +289,7 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
                     std::string resultStr = resultCStr;  // Convert to std::string if needed
                     juce::Logger::outputDebugString("Returned string from Python: " + resultStr);
                     this->outputpath = resultCStr;
+                    this->loadSound(outputpath);
                     // Optionally, use resultStr as needed here in your C++ code
                     
                 }
@@ -324,4 +325,13 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
         PyErr_Print();
         juce::Logger::outputDebugString("Failed to load");
     }
+}
+
+
+void ImagineAudioProcessor::loadSound(juce::File& filepath) {
+    juce::BigInteger range;
+    range.setRange(0, 128, true);
+    mFormatReader = mFormatManager.createReaderFor(filepath);
+    mSampler.addSound(new juce::SamplerSound("Sample", *mFormatReader, range, 60, 0.1, 0.1, 10));
+
 }

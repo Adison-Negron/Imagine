@@ -61,12 +61,13 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    void loadSound(juce::File& soundpath);
     void callPythonFunction(const std::string& img_path,
         const std::string& out_path,
         int kernel_size,
         int step_size,
         int sound_level,
-        int sample_rate,
+        double sampleRate,
         int sound_duration,
         int modulation_duration,
         float modulation_intensity,
@@ -82,6 +83,12 @@ public:
     juce::File outputpath;
 
 private:
+    juce::Synthesiser mSampler;
+    const int mNumVoices{ 128 };
+    juce::AudioFormatManager mFormatManager;
+    juce::AudioFormatReader* mFormatReader{ nullptr };
+
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessor)
 
