@@ -228,10 +228,7 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
     int kernel_size,
     int step_size,
     int sound_level,
-<<<<<<< HEAD
     double sampleRate,
-=======
->>>>>>> 994086f4f71c25c16cef09c9d438c2e5723991d9
     int sound_duration,
     int modulation_duration,
     float modulation_intensity,
@@ -267,13 +264,8 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
                 PyUnicode_FromString(out_path.c_str()),
                 PyLong_FromLong(kernel_size),
                 PyLong_FromLong(step_size),
-<<<<<<< HEAD
                 PyLong_FromLong(sound_level), 
                 PyLong_FromLong(sampleRate),
-=======
-                PyLong_FromLong(sound_level),
-                PyLong_FromLong(getSampleRate()),
->>>>>>> 994086f4f71c25c16cef09c9d438c2e5723991d9
                 PyLong_FromLong(sound_duration),
                 PyLong_FromLong(modulation_duration),
                 PyFloat_FromDouble(modulation_intensity),
