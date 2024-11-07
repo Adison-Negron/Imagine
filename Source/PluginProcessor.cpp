@@ -288,7 +288,7 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
                     std::string resultStr = resultCStr;  // Convert to std::string if needed
                     juce::Logger::outputDebugString("Returned string from Python: " + resultStr);
                     this->outputpath = resultCStr;
-                    this->loadSound(outputpath);
+                    
                     // Optionally, use resultStr as needed here in your C++ code
                     
                 }
@@ -334,3 +334,5 @@ void ImagineAudioProcessor::loadSound(juce::File& filepath) {
     mSampler.addSound(new juce::SamplerSound("Sample", *mFormatReader, range, 60, 0.1, 0.1, 10));
 
 }
+
+

@@ -3,18 +3,20 @@
 
 SliderWindow::SliderWindow(ImagineAudioProcessorEditor* editor) : editor(editor)
 {
-    addSlider(kernel, kernel_label, "Kernel Size", 0, 500, 25);
-    addSlider(step, step_label, "Step Size", 0, 50, 10);
-    addSlider(sound_level, sound_label, "Sound Level", 0, 10, 1);
-    addSlider(sound_duration, duration_label, "Sound Duration", 0, 20, 6);
-    addSlider(modulation_intensity, modulation_intensity_label, "Modulation Intensity", 0, 1, .8);
-    addSlider(modulation_envelope_intensity, envelope_intensity_label, "Envelope Intensity", 0, 1, .2);
-    addSlider(modulation_duration, modulation_duration_label, "Modulation Duration", 0, 20, 6);
-    addSlider(lfo_scalar_freq, lfo_freq_label, "Lfo Frequency", 0, 1, .6);
-    addSlider(lfo_scalar_amplitude, lfo_amplitude_label, "Lfo Amplitude", 0, 1, 1);
-    addSlider(lfo_intensity, lfo_intensity_label, "Lfo Intensity", 0, 1, 1);
-    addSlider(overtone_num_scalar, overtone_num_label, "Overtone Num", 0, 20, 1);
-    addSlider(lfo_amount_scalar, lfo_amount_label, "Lfo Amount", 0, 20, 1);
+    setSize(400, 950);
+    
+    addSlider(kernel, kernel_label, "Kernel Size", 0, 500, 25,1);
+    addSlider(step, step_label, "Step Size", 0, 50, 10,1);
+    addSlider(sound_level, sound_label, "Sound Level", 0, 10, 1,.5);
+    addSlider(sound_duration, duration_label, "Sound Duration", 0, 20, 6,1);
+    addSlider(modulation_intensity, modulation_intensity_label, "Modulation Intensity", 0, 1, .8,.1);
+    addSlider(modulation_envelope_intensity, envelope_intensity_label, "Envelope Intensity", 0, 1, .2,.1);
+    addSlider(modulation_duration, modulation_duration_label, "Modulation Duration", 0, 20, 6,1);
+    addSlider(lfo_scalar_freq, lfo_freq_label, "Lfo Frequency", 0, 1, .6,.1);
+    addSlider(lfo_scalar_amplitude, lfo_amplitude_label, "Lfo Amplitude", 0, 1, 1,.1);
+    addSlider(lfo_intensity, lfo_intensity_label, "Lfo Intensity", 0, 1, 1,.1);
+    addSlider(overtone_num_scalar, overtone_num_label, "Overtone Num", 0, 20, 1,1);
+    addSlider(lfo_amount_scalar, lfo_amount_label, "Lfo Amount", 0, 20, 1,1);
 
     soundGenerationGroup.setText("Sound Generation");
     contentComponent.addAndMakeVisible(soundGenerationGroup);
@@ -108,9 +110,9 @@ void SliderWindow::sliderValueChanged(juce::Slider* slider)
 
 }
 
-void SliderWindow::addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double defaultValue)
+void SliderWindow::addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double defaultValue,double interval)
 {
-    slider.setRange(min, max);
+    slider.setRange(min, max,interval);
     slider.setValue(defaultValue);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);

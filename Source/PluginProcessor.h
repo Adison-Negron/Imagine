@@ -80,10 +80,12 @@ public:
     juce::File currentPath;
     juce::File root;
     juce::File outputpath;
-
-private:
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
+
+
+private:
+
     juce::AudioFormatManager mFormatManager;
     juce::AudioFormatReader* mFormatReader{ nullptr };
 

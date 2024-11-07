@@ -14,7 +14,7 @@ public:
 	void paint(juce::Graphics&) override;
 	void resized() override;
 	void sliderValueChanged(juce::Slider* slider) override;
-	void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default);
+	void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default,double interval);
 
 	juce::Slider& getKernelSlider() { return kernel; }
 	juce::Slider& getStepSlider() { return step; }

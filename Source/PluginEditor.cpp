@@ -41,6 +41,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     slider_window->setContentOwned(windowComponent, true);
     slider_window->setVisible(false);
     slider_window->setBounds(0, 0, 400, 950);
+    slider_window->setResizable(false, false);
 
 }
 
@@ -206,13 +207,14 @@ void ImagineAudioProcessorEditor::changeState(TransportState newState)
 
 void ImagineAudioProcessorEditor::generateSound()
 {
+    audioProcessor.mSampler.clearSounds();
     audioProcessor.callPythonFunction(imagePath,
         outputPath,
-        windowComponent->getKernelSlider().getValue(),
-        windowComponent->getStepSlider().getValue(),
-        windowComponent->getSoundLevelSlider().getValue(),
-        windowComponent->getSoundDurationSlider().getValue(),
-        windowComponent->getModulationDurationSlider().getValue(),
+        (int) windowComponent-> getKernelSlider().getValue(),
+        (int) windowComponent->getStepSlider().getValue(),
+        (int) windowComponent->getSoundLevelSlider().getValue(),
+        (int) windowComponent->getSoundDurationSlider().getValue(),
+        (int) windowComponent->getModulationDurationSlider().getValue(),
         windowComponent->getModulationIntensitySlider().getValue(),
         windowComponent->getModulationEnvelopeIntensitySlider().getValue(),
         windowComponent->getOvertoneNumScalarSlider().getValue(),
@@ -222,5 +224,6 @@ void ImagineAudioProcessorEditor::generateSound()
         windowComponent->getLfoAmountScalarSlider().getValue());
     
     slider_window->setVisible(false);
+    audioProcessor.loadSound(audioProcessor.outputpath);
     
 }
