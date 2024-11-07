@@ -36,34 +36,11 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     deviceManager.addAudioCallback(&audioSourcePlayer);
     audioSourcePlayer.setSource(&transportSource);
 
-    addSlider(kernel, kernel_label, "Kernel Size", 0, 500, 25);
-    addSlider(step, step_label, "Step Size", 0, 50, 10);
-    addSlider(sound_level, sound_label, "Sound Level", 0, 10, 1);
-    addSlider(sample_rate, sample_label, "Sample Rate", 0, 44800, 44800);
-    addSlider(sound_duration, duration_label, "Sound Duration", 0, 20, 6);
-    addSlider(modulation_intensity, modulation_intensity_label, "Modulation Intensity", 0, 1, .8);
-    addSlider(modulation_envelope_intensity, envelope_intensity_label, "Envelope Intensity", 0, 1, .2);
-    addSlider(modulation_duration, modulation_duration_label, "Modulation Duration", 0, 20, 6);
-    addSlider(lfo_scalar_freq, lfo_freq_label, "Lfo Frequency", 0, 1, .6);
-    addSlider(lfo_scalar_amplitude, lfo_amplitude_label, "Lfo Amplitude", 0, 1, 1);
-    addSlider(lfo_intensity, lfo_intensity_label, "Lfo Intensity", 0, 1, 1);
-    addSlider(overtone_num_scalar, overtone_num_label, "Overtone Num", 0, 20, 1);
-    addSlider(lfo_amount_scalar, lfo_amount_label, "Lfo Amount", 0, 20, 1);
-
-    kernel.addListener(this);
-    step.addListener(this);
-    sound_level.addListener(this);
-    sample_rate.addListener(this);
-    sound_duration.addListener(this);
-    modulation_intensity.addListener(this);
-    modulation_envelope_intensity.addListener(this);
-    modulation_duration.addListener(this);
-    lfo_scalar_freq.addListener(this);
-    lfo_scalar_amplitude.addListener(this);
-    lfo_intensity.addListener(this);
-    overtone_num_scalar.addListener(this);
-    lfo_amount_scalar.addListener(this);
-
+    slider_window = std::make_unique<juce::DocumentWindow>("Generation Parameters", juce::Colours::lightgrey, juce::DocumentWindow::allButtons);
+    windowComponent = new SliderWindow(this);
+    slider_window->setContentOwned(windowComponent, true);
+    slider_window->setVisible(false);
+    slider_window->setBounds(0, 0, 400, 950);
 
 }
 
@@ -111,32 +88,6 @@ void ImagineAudioProcessorEditor::resized()
     playButton.setBounds(10, 10, 100, 30);
     stopButton.setBounds(120, 10, 100, 30);
 
-    const int sliderHeight = 20;
-    const int labelWidth = 100;
-    const int spacing = 5;
-    int y = getHeight() / 2; 
-
-    auto positionSliderAndLabel = [&](juce::Slider& slider, juce::Label& label) {
-        label.setBounds(10, y, labelWidth, sliderHeight);
-        slider.setBounds(labelWidth + spacing, y, getWidth() - labelWidth - spacing * 2, sliderHeight);
-        y += sliderHeight + spacing;
-    };
-
-    positionSliderAndLabel(kernel, kernel_label);
-    positionSliderAndLabel(step, step_label);
-    positionSliderAndLabel(sound_level, sound_label);
-    positionSliderAndLabel(sample_rate, sample_label);
-    positionSliderAndLabel(sound_duration, duration_label);
-    positionSliderAndLabel(modulation_intensity, modulation_duration_label);
-    positionSliderAndLabel(modulation_envelope_intensity, envelope_intensity_label);
-    positionSliderAndLabel(modulation_duration, modulation_duration_label);
-    positionSliderAndLabel(lfo_scalar_freq, lfo_freq_label);
-    positionSliderAndLabel(lfo_scalar_amplitude, lfo_amplitude_label);
-    positionSliderAndLabel(lfo_intensity, lfo_intensity_label);
-    positionSliderAndLabel(overtone_num_scalar, overtone_num_label);
-    positionSliderAndLabel(lfo_amount_scalar, lfo_amount_label);
-
-
 }
 
 bool ImagineAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray& files)
@@ -175,25 +126,10 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
     for (const auto& file : files)
     {
         juce::File imageFile(file);
-        std::string imagePath = imageFile.getFullPathName().toStdString();
-
-            audioProcessor.callPythonFunction(imagePath,
-                outputPath,
-                kernel.getValue(),
-                step.getValue(),
-                sound_level.getValue(),
-                sample_rate.getValue(),
-                sound_duration.getValue(),
-                modulation_intensity.getValue(),
-                modulation_envelope_intensity.getValue(),
-                modulation_duration.getValue(),
-                lfo_scalar_freq.getValue(),
-                lfo_scalar_amplitude.getValue(),
-                lfo_intensity.getValue(),
-                overtone_num_scalar.getValue(),
-                lfo_amount_scalar.getValue());
-
+        imagePath = imageFile.getFullPathName().toStdString();
     }
+    slider_window->setVisible(true);
+
 }
 
 juce::File ImagineAudioProcessorEditor::createFolderIfNotExists(const juce::File& parentFolder, const std::string& folderName)
@@ -266,4 +202,25 @@ void ImagineAudioProcessorEditor::changeState(TransportState newState)
             break;
         }
     }
+}
+
+void ImagineAudioProcessorEditor::generateSound()
+{
+    audioProcessor.callPythonFunction(imagePath,
+        outputPath,
+        windowComponent->getKernelSlider().getValue(),
+        windowComponent->getStepSlider().getValue(),
+        windowComponent->getSoundLevelSlider().getValue(),
+        windowComponent->getSoundDurationSlider().getValue(),
+        windowComponent->getModulationDurationSlider().getValue(),
+        windowComponent->getModulationIntensitySlider().getValue(),
+        windowComponent->getModulationEnvelopeIntensitySlider().getValue(),
+        windowComponent->getOvertoneNumScalarSlider().getValue(),
+        windowComponent->getLfoScalarFreqSlider().getValue(),
+        windowComponent->getLfoScalarAmplitudeSlider().getValue(),
+        windowComponent->getLfoIntensitySlider().getValue(),
+        windowComponent->getLfoAmountScalarSlider().getValue());
+    
+    slider_window->setVisible(false);
+    
 }

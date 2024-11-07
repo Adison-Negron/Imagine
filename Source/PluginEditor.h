@@ -12,9 +12,10 @@
 #include "PluginProcessor.h"
 #include <string>
 #include <filesystem>
+#include "SliderWindow.h"
 
 namespace fs = std::filesystem;
-
+class SliderWindow;
 //==============================================================================
 /**
 */
@@ -77,6 +78,7 @@ public:
     {
         this->imageFile = imageFile;
     }
+    void generateSound();
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -84,13 +86,13 @@ private:
     ImagineAudioProcessor& audioProcessor;
     juce::File createFolderIfNotExists(const juce::File& parentFolder, const std::string& folderName);
 
-    juce::Slider kernel, step, sound_level, sample_rate, sound_duration, modulation_duration, modulation_intensity,
-        modulation_envelope_intensity, overtone_num_scalar, lfo_scalar_freq, lfo_scalar_amplitude, lfo_intensity, lfo_amount_scalar;
-    juce::Label kernel_label, step_label, sound_label, sample_label, duration_label, modulation_duration_label, modulation_intensity_label,
-        envelope_intensity_label, overtone_num_label, lfo_freq_label , lfo_amplitude_label, lfo_intensity_label, lfo_amount_label;
 
     void sliderValueChanged(juce::Slider* slider) override;
     juce::File imageFile;
+    SliderWindow* windowComponent;
+    std::string imagePath;
+
+    std::unique_ptr<juce::DocumentWindow> slider_window;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
 };

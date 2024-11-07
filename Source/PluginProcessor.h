@@ -67,7 +67,6 @@ public:
         int kernel_size,
         int step_size,
         int sound_level,
-        double sampleRate,
         int sound_duration,
         int modulation_duration,
         float modulation_intensity,
