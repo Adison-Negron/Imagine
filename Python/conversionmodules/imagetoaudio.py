@@ -179,8 +179,6 @@ def generate_sound(
         raise ValueError('out_path cannot be null')
     if file_name is None:
         raise ValueError('file_name cannot be null')
-    if sound_level < 0 or sound_level > 2:
-        raise ValueError('sound_level must be between 0 and 1')
 
     avg_red_overall = np.mean(rgb_dict['1'])
     avg_green_overall = np.mean(rgb_dict['2'])
@@ -204,13 +202,13 @@ def generate_sound(
     
     if dominant_color == 'red':
         combined_wave = modulate_frequency('square', time, interpolate_red, base_frequency, 
-                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9)
     elif dominant_color == 'green':
         combined_wave = modulate_frequency('saw', time, interpolate_green, base_frequency,
-                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) 
     else:  # 'blue'
         combined_wave = modulate_frequency('sine', time, interpolate_blue, base_frequency, 
-                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) 
 
     #Generate overtones and apply lfo
 
@@ -497,7 +495,14 @@ def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, in
     numpy array
         The modified sound wave.
     """
+    
+
+    # Calculate the amount of LFOs to apply
     lfo_amount = int(round(1 + (5 - 1) * color_average)*lfo_amount_scalar)
+    
+    if lfo_amount==0:
+        return sound
+
     split_red = np.array_split(interpolate_red, lfo_amount)
     split_green = np.array_split(interpolate_green, lfo_amount)
     split_blue = np.array_split(interpolate_blue, lfo_amount)
@@ -597,10 +602,10 @@ def main_generation_handler(
         out_path: str,
         kernel_size: int,
         step_size: int,
-        sound_level: int,
+        sound_level: float,
         sample_rate: int,
         sound_duration: int,
-        modulation_duration: int,
+        modulation_duration: float,
         modulation_intensity: float,
         modulation_envelope_intensity: float,
         overtone_num_scalar: float,
@@ -775,7 +780,7 @@ if __name__ == "__main__":
         )
 
     else:
-        img_path = os.getcwd() + "/imgs/test5.jpg"
+        img_path = os.getcwd() + "/imgs/"
         out_path = os.getcwd() + "/output/"
         kernel_size = 20
         step_size = 10

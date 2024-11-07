@@ -83,11 +83,12 @@ public:
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
 
-
 private:
 
     juce::AudioFormatManager mFormatManager;
     juce::AudioFormatReader* mFormatReader{ nullptr };
+    std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
+
 
 
     //==============================================================================
