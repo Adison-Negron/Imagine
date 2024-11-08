@@ -12,7 +12,7 @@ SliderWindow::SliderWindow(ImagineAudioProcessorEditor* editor) : editor(editor)
     addSlider(modulation_intensity, modulation_intensity_label, "Modulation Intensity", 0, 1, .8,.1);
     addSlider(modulation_envelope_intensity, envelope_intensity_label, "Envelope Intensity (Falloff)", .1, 1, .2,.1);
     addSlider(modulation_duration, modulation_duration_label, "Modulation Duration (Stretch)", -20, 20, 6,.1);
-    addSlider(lfo_scalar_freq, lfo_freq_label, "Lfo Frequency", 0,50, .5,.01);
+    addSlider(lfo_scalar_freq, lfo_freq_label, "Lfo Frequency", 0,100, .5,.01);
     addSlider(lfo_scalar_amplitude, lfo_amplitude_label, "Lfo Amplitude", 0, 1, 1,.1);
     addSlider(lfo_intensity, lfo_intensity_label, "Lfo Intensity", 0, 1, 1,.1);
     addSlider(overtone_num_scalar, overtone_num_label, "Overtone Anmount", 0, 4, 1,.1);

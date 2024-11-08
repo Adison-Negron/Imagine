@@ -33,6 +33,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 
 #endif
 {
+    
     mFormatManager.registerBasicFormats();
     for (int i = 0; i < mNumVoices; i++) {
 
@@ -46,23 +47,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     currentPath = juce::File::getCurrentWorkingDirectory();
     root = currentPath;
 
-    while (root.exists() && !root.getFileName().equalsIgnoreCase("Imagine"))
-    {
-        root = root.getParentDirectory();
-    }
-
-    if (root.getFileName().equalsIgnoreCase("Imagine"))
-    {
-        juce::File pythonScriptDir = root.getChildFile("Python/conversionmodules");
-        pythonpath = pythonScriptDir.getFullPathName().toStdString();
-
-        PyObject* sysPath = PySys_GetObject("path");
-        if (sysPath && PyList_Check(sysPath)) {
-            PyObject* pyPath = PyUnicode_FromString(pythonpath.c_str());
-            PyList_Append(sysPath, pyPath);
-            Py_DECREF(pyPath);
-        }
-    }
+    pyEmbedder = std::make_unique<Pyembedder>();
 }
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
@@ -236,94 +221,85 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
     float lfo_scalar_freq,
     float lfo_scalar_amplitude,
     float lfo_intensity,
-    float lfo_amount_scalar)
-{
-    PyObject* pName, * pModule, *pDict, * pFunc, * pArgs, * pValue;
+    float lfo_amount_scalar) {
+    // Run the embedded Python code
+    if (firstload) {
 
-    // Set the Python script name 
-    pName = PyUnicode_FromString("imagetoaudio");
+        Py_Initialize();
+        firstload = false;
 
-    // Import the Python module
-    pModule = PyImport_Import(pName);
-
-
-    Py_DECREF(pName);
-
-    if (pModule != nullptr)
-    {
-        // Get the function from the module
-        pFunc = PyObject_GetAttrString(pModule,(char*) "main_generation_handler");
-
-        // Check if the function is callable
-        if (pFunc && PyCallable_Check(pFunc))
-        {
-            // Create the arguments for the Python function
-            PyObject* pArgs = PyTuple_Pack(15,
-                PyUnicode_FromString(img_path.c_str()),
-                PyUnicode_FromString(out_path.c_str()),
-                PyLong_FromLong(kernel_size),
-                PyLong_FromLong(step_size),
-                PyLong_FromLong(sound_level), 
-                PyLong_FromLong(getSampleRate()),
-                PyLong_FromLong(sound_duration),
-                PyLong_FromLong(modulation_duration),
-                PyFloat_FromDouble(modulation_intensity),
-                PyFloat_FromDouble(modulation_envelope_intensity),
-                PyFloat_FromDouble(overtone_num_scalar),
-                PyFloat_FromDouble(lfo_scalar_freq),
-                PyFloat_FromDouble(lfo_scalar_amplitude),
-                PyFloat_FromDouble(lfo_intensity),
-                PyFloat_FromDouble(lfo_amount_scalar)
-            );
-
-            // Call the function
-            PyObject* pValue = PyObject_CallObject(pFunc, pArgs);
-            
-
-            if (pValue != nullptr)
-            {
-                if (PyUnicode_Check(pValue)) // Ensure the return type is a string
-                {
-                    const char* resultCStr = PyUnicode_AsUTF8(pValue);
-                    std::string resultStr = resultCStr;  // Convert to std::string if needed
-                    juce::Logger::outputDebugString("Returned string from Python: " + resultStr);
-                    this->outputpath = resultCStr;
-                    
-                    // Optionally, use resultStr as needed here in your C++ code
-                    
-                }
-                else
-                {
-                    juce::Logger::outputDebugString("Error: Python function did not return a string.");
-                }
-
-                Py_DECREF(pValue); // Release the Python object
-            }
-            else
-            {
-                Py_DECREF(pFunc);
-                Py_DECREF(pModule);
-                Py_DECREF(pArgs);
-                PyErr_Print();
-                juce::Logger::outputDebugString("Call to Python function failed");
-                return;
-            }
-            Py_DECREF(pArgs);
-        }
-        else
-        {
-            if (PyErr_Occurred())
-                PyErr_Print();
-            juce::Logger::outputDebugString("Cannot find function main_generation_handler");
-        }
-        Py_XDECREF(pFunc);
-        Py_DECREF(pModule);
     }
-    else
-    {
-        PyErr_Print();
-        juce::Logger::outputDebugString("Failed to load");
+
+    std::string fullPythonCode = std::string(pyEmbedder->Pythoncode1) +
+        std::string(pyEmbedder->Pythoncode2) +
+        std::string(pyEmbedder->Pythoncode3) +
+        std::string(pyEmbedder->Pythoncode4) +
+        std::string(pyEmbedder->Pythoncode5) +
+        std::string(pyEmbedder->Pythoncode6) +
+        std::string(pyEmbedder->Pythoncode7) +
+        std::string(pyEmbedder->Pythoncode8) +
+        std::string(pyEmbedder->Pythoncode9) +
+        std::string(pyEmbedder->Pythoncode10) +
+        std::string(pyEmbedder->Pythoncode11);
+
+    // Use fullPythonCode where needed to execute or pass to the Python interpreter.
+    PyRun_SimpleString(fullPythonCode.c_str());
+
+    // Access the "__main__" module to retrieve the embedded function
+    PyObject* mainModule = PyImport_AddModule("__main__");
+    PyObject* globalDict = PyModule_GetDict(mainModule);
+    PyObject* pFunc = PyDict_GetItemString(globalDict, "main_generation_handler");
+
+    if (pFunc && PyCallable_Check(pFunc)) {
+        // Create arguments for main_generation_handler
+        PyObject* pArgs = PyTuple_Pack(15,
+            PyUnicode_FromString(img_path.c_str()),
+            PyUnicode_FromString(out_path.c_str()),
+            PyLong_FromLong(kernel_size),
+            PyLong_FromLong(step_size),
+            PyLong_FromLong(sound_level),
+            PyLong_FromLong(getSampleRate()),
+            PyLong_FromLong(sound_duration),
+            PyLong_FromLong(modulation_duration),
+            PyFloat_FromDouble(modulation_intensity),
+            PyFloat_FromDouble(modulation_envelope_intensity),
+            PyFloat_FromDouble(overtone_num_scalar),
+            PyFloat_FromDouble(lfo_scalar_freq),
+            PyFloat_FromDouble(lfo_scalar_amplitude),
+            PyFloat_FromDouble(lfo_intensity),
+            PyFloat_FromDouble(lfo_amount_scalar)
+        );
+
+        // Call the Python function
+        PyObject* pValue = PyObject_CallObject(pFunc, pArgs);
+
+        if (pValue != nullptr) {
+            if (PyUnicode_Check(pValue)) { // Ensure the return type is a string
+                const char* resultCStr = PyUnicode_AsUTF8(pValue);
+                std::string resultStr = resultCStr;  // Convert to std::string if needed
+                juce::Logger::outputDebugString("Returned string from Python: " + resultStr);
+                this->outputpath = resultCStr; // Set output path from result
+            }
+            else {
+                juce::Logger::outputDebugString("Error: Python function did not return a string.");
+            }
+
+            Py_DECREF(pValue); // Release the Python object
+        }
+        else {
+            PyErr_Print();
+            juce::Logger::outputDebugString("Call to Python function failed");
+        }
+
+        Py_DECREF(pArgs);
     }
+    else {
+        if (PyErr_Occurred())
+            PyErr_Print();
+        juce::Logger::outputDebugString("Cannot find function main_generation_handler");
+    }
+
+    Py_XDECREF(pFunc);
 }
 
 

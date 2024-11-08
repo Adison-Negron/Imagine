@@ -7,8 +7,9 @@
 */
 
 #pragma once
-
+#include "Pyembedder.h"
 #include <JuceHeader.h>
+
 #ifdef _DEBUG
 #undef _DEBUG
 #include <python.h>
@@ -16,6 +17,7 @@
 #else
 #include <python.h>
 #endif
+
 
 
 //==============================================================================
@@ -62,7 +64,8 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void loadSound(juce::File& soundpath);
-  
+    bool firstload = true;
+;
 
 
     void callPythonFunction(const std::string& img_path,
@@ -92,7 +95,7 @@ private:
     juce::AudioFormatManager mFormatManager;
     juce::AudioFormatReader* mFormatReader{ nullptr };
     std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
-
+    std::unique_ptr<Pyembedder> pyEmbedder;
 
 
     //==============================================================================

@@ -81,7 +81,7 @@ void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 void ImagineAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (juce::Colour::fromString(app_colors[0]));
+    g.fillAll (juce::Colour::fromString(app_colors[1]));
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
     //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
