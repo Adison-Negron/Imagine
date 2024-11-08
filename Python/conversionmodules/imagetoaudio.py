@@ -6,6 +6,7 @@ from PIL import Image
 from scipy import signal
 import math
 import scipy
+from scipy.signal import butter, lfilter
 
 
 
@@ -179,8 +180,6 @@ def generate_sound(
         raise ValueError('out_path cannot be null')
     if file_name is None:
         raise ValueError('file_name cannot be null')
-    if sound_level < 0 or sound_level > 2:
-        raise ValueError('sound_level must be between 0 and 1')
 
     avg_red_overall = np.mean(rgb_dict['1'])
     avg_green_overall = np.mean(rgb_dict['2'])
@@ -204,13 +203,13 @@ def generate_sound(
     
     if dominant_color == 'red':
         combined_wave = modulate_frequency('square', time, interpolate_red, base_frequency, 
-                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9)
     elif dominant_color == 'green':
         combined_wave = modulate_frequency('saw', time, interpolate_green, base_frequency,
-                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) 
     else:  # 'blue'
         combined_wave = modulate_frequency('sine', time, interpolate_blue, base_frequency, 
-                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) * sound_level
+                                           modulation_duration=modulation_duration, modulation_intensity=modulation_intensity, envelope_intensity=modulation_envelope_intensity,intensity = .9) 
 
     #Generate overtones and apply lfo
 
@@ -220,8 +219,11 @@ def generate_sound(
     
 
     # Save the sound file
-    final_sound = final_sound * sound_level
+    final_sound = apply_limiter(final_sound, threshold=0.8)
+    final_sound = lowpass_filter(final_sound, cutoff=5000, sample_rate=sample_rate)
+    final_sound = final_sound *     sound_level
     final_sound = (final_sound * 32767).astype(np.int16)
+
     
     # Write the output to a WAV file
     output_file_name = f"{out_path}{file_name}_output_{dominant_color}.wav"
@@ -272,6 +274,54 @@ def color_diff(r, g, b):
     if r is None or g is None or b is None:
         raise ValueError('RGB values cannot be null')
     return r - g - b
+
+def apply_limiter(audio_signal, threshold=0.8):
+    """
+    Apply a simple limiter to the audio signal to keep peaks within a certain threshold.
+    
+    Parameters:
+    ----------
+    audio_signal : numpy array
+        The audio waveform to be limited.
+    threshold : float
+        The maximum allowed amplitude value.
+    
+    Returns:
+    -------
+    numpy array
+        The limited audio waveform.
+    """
+    return np.clip(audio_signal, -threshold, threshold)
+
+
+
+
+
+def lowpass_filter(audio_signal, cutoff, sample_rate, order=5):
+    """
+    Apply a low-pass filter to reduce high-frequency components.
+
+    Parameters:
+    ----------
+    audio_signal : numpy array
+        The audio waveform to be filtered.
+    cutoff : float
+        The cutoff frequency for the low-pass filter in Hz.
+    sample_rate : int
+        The sample rate of the audio signal.
+    order : int, optional
+        The order of the filter, which affects sharpness of cutoff.
+    
+    Returns:
+    -------
+    numpy array
+        The low-pass filtered audio waveform.
+    """
+    nyquist = 0.5 * sample_rate
+    normal_cutoff = cutoff / nyquist
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return lfilter(b, a, audio_signal)
+
 
 #
 def calculate_overtone_frequencies(base_freq, num, type):
@@ -467,9 +517,10 @@ def multiply_wave(wave, second_wave, scalar=1):
     return wave * (second_wave*scalar)
 
 #
-def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1,lfo_amount_scalar=1):
+
+def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1, lfo_amount_scalar=1):
     """
-    Apply a Low Frequency Oscillator (LFO) to a sound wave.
+    Apply a Low Frequency Oscillator (LFO) with a dynamic frequency to a sound wave.
 
     Parameters
     ----------
@@ -488,16 +539,22 @@ def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, in
     intensity : float, optional
         The intensity of the LFO. Defaults to 1.
     scalar_freq : float, optional
-        The frequency scalar of the LFO. Defaults to 1.
+        The base frequency scalar of the LFO. Defaults to 1.
     scalar_amplitude : float, optional
         The amplitude scalar of the LFO. Defaults to 1.
+    lfo_amount_scalar : float, optional
+        The multiplier for the number of LFOs. Defaults to 1.
 
     Returns
     -------
     numpy array
-        The modified sound wave.
+        The modified sound wave with a dynamic LFO applied.
     """
-    lfo_amount = int(round(1 + (5 - 1) * color_average)*lfo_amount_scalar)
+    lfo_amount = int(round(1 + (5 - 1) * color_average) * lfo_amount_scalar)
+
+    if lfo_amount == 0:
+        return sound
+
     split_red = np.array_split(interpolate_red, lfo_amount)
     split_green = np.array_split(interpolate_green, lfo_amount)
     split_blue = np.array_split(interpolate_blue, lfo_amount)
@@ -529,15 +586,105 @@ def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, in
             lfo_frequencies.append('sawtooth')
 
     lfo_sound = np.ones_like(sound)
+    
     for i in range(len(lfo_frequencies)):
+        # Make the LFO frequency vary over time
+        dynamic_scalar_freq = scalar_freq * (1 + 0.5 * np.sin(0.1 * time))
+        
+        # Calculate the actual LFO frequency
+        modulated_freq = map_to_range_with_variability(color_average + saturation, 0, 1) * dynamic_scalar_freq
+
         if lfo_frequencies[i] == 'sine':
-            lfo_sound *= (interpolate_blue * scalar_amplitude) * np.sin(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+            lfo_wave = (interpolate_blue * scalar_amplitude) * np.sin(2 * np.pi * modulated_freq * time) * intensity
         elif lfo_frequencies[i] == 'square':
-            lfo_sound *= (interpolate_red * scalar_amplitude) * signal.square(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+            lfo_wave = (interpolate_red * scalar_amplitude) * signal.square(2 * np.pi * modulated_freq * time) * intensity
         elif lfo_frequencies[i] == 'sawtooth':
-            lfo_sound *= (interpolate_green * scalar_amplitude) * signal.sawtooth(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+            lfo_wave = (interpolate_green * scalar_amplitude) * signal.sawtooth(2 * np.pi * modulated_freq * time) * intensity
+
+        lfo_sound *= lfo_wave
 
     return multiply_wave(lfo_sound, sound)
+
+
+
+# def apply_lfo(sound, color_average, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1,lfo_amount_scalar=1):
+#     """
+#     Apply a Low Frequency Oscillator (LFO) to a sound wave.
+
+#     Parameters
+#     ----------
+#     sound : numpy array
+#         The input sound wave to be modified.
+#     color_average : float
+#         The average color value of the image.
+#     time : numpy array
+#         The time array of the sound wave.
+#     interpolate_red : numpy array
+#         The interpolated red color channel of the image.
+#     interpolate_green : numpy array
+#         The interpolated green color channel of the image.
+#     interpolate_blue : numpy array
+#         The interpolated blue color channel of the image.
+#     intensity : float, optional
+#         The intensity of the LFO. Defaults to 1.
+#     scalar_freq : float, optional
+#         The frequency scalar of the LFO. Defaults to 1.
+#     scalar_amplitude : float, optional
+#         The amplitude scalar of the LFO. Defaults to 1.
+
+#     Returns
+#     -------
+#     numpy array
+#         The modified sound wave.
+#     """
+    
+
+#     # Calculate the amount of LFOs to apply
+#     lfo_amount = int(round(1 + (5 - 1) * color_average)*lfo_amount_scalar)
+    
+#     if lfo_amount==0:
+#         return sound
+
+#     split_red = np.array_split(interpolate_red, lfo_amount)
+#     split_green = np.array_split(interpolate_green, lfo_amount)
+#     split_blue = np.array_split(interpolate_blue, lfo_amount)
+
+#     lfo_frequencies = []
+#     for i in range(lfo_amount):
+#         segment_avg_red = np.mean(split_red[i])
+#         segment_avg_green = np.mean(split_green[i])
+#         segment_avg_blue = np.mean(split_blue[i])
+#         max_val = np.max([segment_avg_red, segment_avg_green, segment_avg_blue])
+#         min_val = np.min([segment_avg_red, segment_avg_green, segment_avg_blue])
+
+#         delta = max_val - min_val
+#         lightness = (max_val + min_val) / 2
+
+#         if delta == 0:
+#             saturation = 0.01
+#         else:
+#             if lightness < 0.5:
+#                 saturation = delta / (max_val + min_val)
+#             else:
+#                 saturation = delta / (2 - max_val - min_val)
+
+#         if max_val == segment_avg_red:
+#             lfo_frequencies.append('square')
+#         elif max_val == segment_avg_blue:
+#             lfo_frequencies.append('sine')
+#         else:
+#             lfo_frequencies.append('sawtooth')
+
+#     lfo_sound = np.ones_like(sound)
+#     for i in range(len(lfo_frequencies)):
+#         if lfo_frequencies[i] == 'sine':
+#             lfo_sound *= (interpolate_blue * scalar_amplitude) * np.sin(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+#         elif lfo_frequencies[i] == 'square':
+#             lfo_sound *= (interpolate_red * scalar_amplitude) * signal.square(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+#         elif lfo_frequencies[i] == 'sawtooth':
+#             lfo_sound *= (interpolate_green * scalar_amplitude) * signal.sawtooth(2 * np.pi * (map_to_range_with_variability(color_average + saturation, 0, 1) * scalar_freq) * time) * intensity
+
+#     return multiply_wave(lfo_sound, sound)
 
 #
 def modify_base_tone(sound, color_average, overtone_type,base_freq, time, interpolate_red, interpolate_green, interpolate_blue, intensity=1, scalar_freq=1, scalar_amplitude=1,overtone_num_scalar=1,lfo_amount_scalar = 1):
@@ -597,10 +744,10 @@ def main_generation_handler(
         out_path: str,
         kernel_size: int,
         step_size: int,
-        sound_level: int,
+        sound_level: float,
         sample_rate: int,
         sound_duration: int,
-        modulation_duration: int,
+        modulation_duration: float,
         modulation_intensity: float,
         modulation_envelope_intensity: float,
         overtone_num_scalar: float,
@@ -775,7 +922,7 @@ if __name__ == "__main__":
         )
 
     else:
-        img_path = os.getcwd() + "/imgs/test5.jpg"
+        img_path = os.getcwd() + "/imgs/"
         out_path = os.getcwd() + "/output/"
         kernel_size = 20
         step_size = 10
