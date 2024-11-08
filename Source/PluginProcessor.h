@@ -62,11 +62,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void loadSound(juce::File& soundpath);
-  
-
-
     void callPythonFunction(const std::string& img_path,
-
         const std::string& out_path,
         int kernel_size,
         int step_size,
@@ -87,12 +83,11 @@ public:
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
 
+
 private:
 
     juce::AudioFormatManager mFormatManager;
     juce::AudioFormatReader* mFormatReader{ nullptr };
-    std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
-
 
 
     //==============================================================================

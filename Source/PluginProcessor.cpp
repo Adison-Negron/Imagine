@@ -331,22 +331,7 @@ void ImagineAudioProcessor::loadSound(juce::File& filepath) {
     juce::BigInteger range;
     range.setRange(0, 128, true);
     mFormatReader = mFormatManager.createReaderFor(filepath);
-
-    int numChannels = static_cast<int>(mFormatReader->numChannels);
-    int numSamples = static_cast<int>(mFormatReader->lengthInSamples);
-
-
-    auto sampleLength = static_cast<int>(mFormatReader->lengthInSamples);
-    std::unique_ptr<juce::AudioFormatReader> reader(mFormatManager.createReaderFor(filepath));
-
-    if (reader != nullptr) {
-
-        mainbuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
-        reader->read(mainbuffer.get(), 0, reader->lengthInSamples, 0, true, true);
-    }
-
     mSampler.addSound(new juce::SamplerSound("Sample", *mFormatReader, range, 60, 0.1, 0.1, 10));
-    
 
 }
 
