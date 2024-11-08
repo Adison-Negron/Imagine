@@ -19,17 +19,15 @@ SliderWindow::SliderWindow(ImagineAudioProcessorEditor* editor) : editor(editor)
     addSlider(lfo_amount_scalar, lfo_amount_label, "Lfo Amount", 0, 20, 1,1);
 
     soundGenerationGroup.setText("Sound Generation");
-    contentComponent.addAndMakeVisible(soundGenerationGroup);
+    addAndMakeVisible(soundGenerationGroup);
     modulationGroup.setText("Modulation");
-    contentComponent.addAndMakeVisible(modulationGroup);
+    addAndMakeVisible(modulationGroup);
     baseToneGroup.setText("Base Tone");
-    contentComponent.addAndMakeVisible(baseToneGroup);
+    addAndMakeVisible(baseToneGroup);
 
-    contentComponent.addAndMakeVisible(generateButton);
+    addAndMakeVisible(generateButton);
     generateButton.onClick = [editor] { editor->generateSound(); };
 
-    viewport.setViewedComponent(&contentComponent, false);
-    addAndMakeVisible(viewport);
 }
 
 SliderWindow::~SliderWindow()
@@ -46,62 +44,30 @@ void SliderWindow::paint(juce::Graphics& g)
 void SliderWindow::resized()
 {
 
-    viewport.setBounds(getLocalBounds());
-    int padding = 10;
-    int sliderWidth = 70;
-    int sliderHeight = 70;
-    int labelHeight = 40;
-    int labelWidth = 70; 
-    int groupPadding = 30;
-    int numColumns = 3;
-
-    int totalWidth = numColumns * (sliderWidth + padding) - padding;
-    int xPos = (getWidth() - totalWidth) / 2;
+    soundGenerationGroup.setBoundsRelative(0.1f, 0.1f, 0.8f, 0.25f);
+    modulationGroup.setBoundsRelative(0.1f, 0.38f, 0.8f, 0.25f);
+    baseToneGroup.setBoundsRelative(0.1f, 0.66f, 0.8f, 0.25f);
 
 
-    soundGenerationGroup.setBounds(xPos - groupPadding, 10, totalWidth + 2 * groupPadding, 2 * (sliderHeight + labelHeight + padding) + groupPadding);
-    int yPos = 30 + groupPadding / 2;
+    setPositionWithinGroup(soundGenerationGroup, kernel, kernel_label, 0.0f, 0.02f, 0.25f, 0.30f);
+    setPositionWithinGroup(soundGenerationGroup, step, step_label, 0.3f, 0.02f, 0.25f, 0.30f);
+    setPositionWithinGroup(soundGenerationGroup, sound_level, sound_label, 0.6f, 0.02f, 0.25f, 0.30f);
+    setPositionWithinGroup(soundGenerationGroup, sound_duration, duration_label, 0.0f, 0.52f, 0.25f, 0.30f);
 
-    auto setPosition = [&](juce::Slider& slider, juce::Label& label)
-    {
-        slider.setBounds(xPos, yPos + labelHeight, sliderWidth, sliderHeight);
-        label.setBounds(xPos, yPos, labelWidth, labelHeight); 
-        xPos += sliderWidth + padding;
 
-        if ((xPos + sliderWidth) > (getWidth() - groupPadding))
-        {
-            xPos = (getWidth() - totalWidth) / 2;
-            yPos += sliderHeight + labelHeight + padding;
-        }
-    };
+    setPositionWithinGroup(modulationGroup, modulation_intensity, modulation_intensity_label, 0.0f, 0.03f, 0.25f, 0.30f);
+    setPositionWithinGroup(modulationGroup, modulation_envelope_intensity, envelope_intensity_label, 0.3f, 0.03f, 0.25f, 0.30f);
+    setPositionWithinGroup(modulationGroup, modulation_duration, modulation_duration_label, 0.6f, 0.03f, 0.25f, 0.30f);
 
-    setPosition(kernel, kernel_label);
-    setPosition(step, step_label);
-    setPosition(sound_level, sound_label);
-    setPosition(sound_duration, duration_label);
 
-    xPos = (getWidth() - totalWidth) / 2;
-    yPos += sliderHeight + labelHeight + padding + groupPadding;
-    modulationGroup.setBounds(xPos - groupPadding, yPos - groupPadding / 2, totalWidth + 2 * groupPadding, (sliderHeight + labelHeight + padding) * 2 + groupPadding);
-    yPos += groupPadding / 2;
+    setPositionWithinGroup(baseToneGroup, overtone_num_scalar, overtone_num_label, 0.0f, 0.02f, 0.25f, 0.30f);
+    setPositionWithinGroup(baseToneGroup, lfo_scalar_freq, lfo_freq_label, 0.3f, 0.02f, 0.25f, 0.30f);
+    setPositionWithinGroup(baseToneGroup, lfo_scalar_amplitude, lfo_amplitude_label, 0.6f, 0.02f, 0.25f, 0.30f);
+    setPositionWithinGroup(baseToneGroup, lfo_intensity, lfo_intensity_label, 0.0f, 0.52f, 0.25f, 0.30f);
+    setPositionWithinGroup(baseToneGroup, lfo_amount_scalar, lfo_amount_label, 0.3f, 0.52f, 0.25f, 0.30f);
 
-    setPosition(modulation_intensity, modulation_intensity_label);
-    setPosition(modulation_envelope_intensity, envelope_intensity_label);
-    setPosition(modulation_duration, modulation_duration_label);
 
-    xPos = (getWidth() - totalWidth) / 2;
-    yPos += sliderHeight + labelHeight + padding + groupPadding;
-    baseToneGroup.setBounds(xPos - groupPadding, yPos - groupPadding / 2, totalWidth + 2 * groupPadding, (sliderHeight + labelHeight + padding) * 2 + groupPadding);
-    yPos += groupPadding / 2;
-
-    setPosition(overtone_num_scalar, overtone_num_label);
-    setPosition(lfo_scalar_freq, lfo_freq_label);
-    setPosition(lfo_scalar_amplitude, lfo_amplitude_label);
-    setPosition(lfo_intensity, lfo_intensity_label);
-    setPosition(lfo_amount_scalar, lfo_amount_label);
-
-    generateButton.setBounds((xPos/2) - 40, (yPos + sliderHeight + labelHeight + padding) + 10, totalWidth, 30);
-    contentComponent.setSize(getWidth(), yPos + sliderHeight + labelHeight + padding + groupPadding + 30);
+    generateButton.setBoundsRelative(0.1f, 0.93f, 0.8f, 0.05f);
 
 }
 
@@ -117,11 +83,17 @@ void SliderWindow::addSlider(juce::Slider& slider, juce::Label& label, const juc
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     slider.setColour(juce::Slider::ColourIds::rotarySliderFillColourId, juce::Colours::whitesmoke);
-    addAndMakeVisible(slider);
-    contentComponent.addAndMakeVisible(slider);
 
     label.setText(name, juce::dontSendNotification);
     label.attachToComponent(&slider, false); 
-    addAndMakeVisible(label);
-    contentComponent.addAndMakeVisible(label);
+
+}
+
+void SliderWindow::setPositionWithinGroup(juce::Component& group, juce::Slider& slider, juce::Label& label, float relX, float relY, float relWidth, float relHeight)
+{
+    group.addAndMakeVisible(slider);
+    group.addAndMakeVisible(label);
+    slider.setBoundsRelative(relX, relY + 0.14f, relWidth, relHeight); 
+    label.setBoundsRelative(relX, relY, relWidth, 0.2f);
+
 }
