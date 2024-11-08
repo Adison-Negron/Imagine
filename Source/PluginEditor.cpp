@@ -12,23 +12,29 @@
 
 //==============================================================================
 ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
-{
+    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(5),  // Initialize the thumbnail cache with a cache size of 5
+    thumbnail(512, formatManager, thumbnailCache)
+{   
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
+
     setSize (1280, 720);
     state = (Stopping);
 
-    addAndMakeVisible(&playButton);
-    playButton.onClick = [this] { playButtonClicked(); };
-    playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
+    //addAndMakeVisible(&playButton);
+    //playButton.onClick = [this] { playButtonClicked(); };
+    //playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
 
 
 
-    addAndMakeVisible(&stopButton);
-    stopButton.onClick = [this] { stopButtonClicked(); };
-    stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    //addAndMakeVisible(&stopButton);
+    //stopButton.onClick = [this] { stopButtonClicked(); };
+    //stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+       
+    //Audio thumbnail init
 
+
+    // Optionally, add more items to mainFlexBox as needed
 
 
     formatManager.registerBasicFormats();
@@ -75,19 +81,29 @@ void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 void ImagineAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
+    g.fillAll (juce::Colour::fromString(app_colors[0]));
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+
+    if (thumbnail.getTotalLength() > 0.0)
+    {
+        auto area = getLocalBounds().reduced(10); // Set drawing area with padding
+        thumbnail.drawChannels(g, area, 0.0, thumbnail.getTotalLength(), 1.0f);
+    }
+    else
+    {
+        g.drawText(imgstate, getLocalBounds(), juce::Justification::centred, true);
+    }
 }
+
 
 void ImagineAudioProcessorEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
-    playButton.setBounds(10, 10, 100, 30);
-    stopButton.setBounds(120, 10, 100, 30);
+    //playButton.setBounds(10, 10, 100, 30);
+    //stopButton.setBounds(120, 10, 100, 30);
 
 }
 
@@ -118,6 +134,24 @@ void ImagineAudioProcessorEditor::deleteFiles(const juce::File& folder)
 
 void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
 {
+    imgstate = "Path Loaded. Change parameters and Generate sound";
+    thumbnail.clear();
+    repaint();  // Repaint the editor to show the cleared thumbnail
+    audioProcessor.mSampler.clearSounds();
+
+//Default values
+    windowComponent->getKernelSlider().setValue(25);
+    windowComponent->getStepSlider().setValue(10);
+    windowComponent->getSoundLevelSlider().setValue(1);
+    windowComponent->getSoundDurationSlider().setValue(10);
+    windowComponent->getModulationIntensitySlider().setValue(.8);
+    windowComponent->getModulationEnvelopeIntensitySlider().setValue(.2);
+    windowComponent->getModulationDurationSlider().setValue(6);
+    windowComponent->getLfoScalarFreqSlider().setValue(.5);
+    windowComponent->getLfoScalarAmplitudeSlider().setValue(1);
+    windowComponent->getOvertoneNumScalarSlider().setValue(1);
+    windowComponent->getLfoAmountScalarSlider().setValue(1);
+
 
     documentsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
     mainFolder = createFolderIfNotExists(documentsDir, "Imagine");
@@ -157,33 +191,33 @@ juce::File ImagineAudioProcessorEditor::createFolderIfNotExists(const juce::File
     return folder;
 }
 
-void ImagineAudioProcessorEditor::playButtonClicked()
-{
-    changeState(Starting);
-}
+//void ImagineAudioProcessorEditor::playButtonClicked()
+//{
+//    changeState(Starting);
+//}
+//
+//void ImagineAudioProcessorEditor::stopButtonClicked()
+//{
+//    changeState(Stopping);
+//}
 
-void ImagineAudioProcessorEditor::stopButtonClicked()
-{
-    changeState(Stopping);
-}
-
-void ImagineAudioProcessorEditor::playWavFile()
-{
-    juce::File wavFile = audioProcessor.outputpath;
-
-    if (wavFile.existsAsFile())
-    {
-        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(wavFile));
-
-        if (reader != nullptr)
-        {
-            std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader.release(), true));
-            transportSource.setSource(newSource.get(), 0, nullptr, 44800);
-            readerSource.reset(newSource.release());
-            transportSource.start();
-        }
-    }
-}
+//void ImagineAudioProcessorEditor::playWavFile()
+//{
+//    juce::File wavFile = audioProcessor.outputpath;
+//
+//    if (wavFile.existsAsFile())
+//    {
+//        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(wavFile));
+//
+//        if (reader != nullptr)
+//        {
+//            std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader.release(), true));
+//            transportSource.setSource(newSource.get(), 0, nullptr, 44800);
+//            readerSource.reset(newSource.release());
+//            transportSource.start();
+//        }
+//    }
+//}
 
 void ImagineAudioProcessorEditor::changeState(TransportState newState)
 {
@@ -194,7 +228,7 @@ void ImagineAudioProcessorEditor::changeState(TransportState newState)
         switch (state)
         {
         case Starting:
-            playWavFile();
+            //playWavFile();
             transportSource.start();
             break;
 
@@ -207,14 +241,15 @@ void ImagineAudioProcessorEditor::changeState(TransportState newState)
 
 void ImagineAudioProcessorEditor::generateSound()
 {
+    
     audioProcessor.mSampler.clearSounds();
     audioProcessor.callPythonFunction(imagePath,
         outputPath,
         (int) windowComponent-> getKernelSlider().getValue(),
         (int) windowComponent->getStepSlider().getValue(),
-        (int) windowComponent->getSoundLevelSlider().getValue(),
-        (int) windowComponent->getSoundDurationSlider().getValue(),
-        (int) windowComponent->getModulationDurationSlider().getValue(),
+        windowComponent->getSoundLevelSlider().getValue(),
+        windowComponent->getSoundDurationSlider().getValue(),
+        windowComponent->getModulationDurationSlider().getValue(),
         windowComponent->getModulationIntensitySlider().getValue(),
         windowComponent->getModulationEnvelopeIntensitySlider().getValue(),
         windowComponent->getOvertoneNumScalarSlider().getValue(),
@@ -223,7 +258,9 @@ void ImagineAudioProcessorEditor::generateSound()
         windowComponent->getLfoIntensitySlider().getValue(),
         windowComponent->getLfoAmountScalarSlider().getValue());
     
-    slider_window->setVisible(false);
+    //slider_window->setVisible(false);
     audioProcessor.loadSound(audioProcessor.outputpath);
-    
+    thumbnail.setSource(new juce::FileInputSource(audioProcessor.outputpath));
+    repaint();
 }
+

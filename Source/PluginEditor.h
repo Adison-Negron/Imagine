@@ -22,6 +22,21 @@ class SliderWindow;
 class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener
 {
 public:
+
+    //Colors configuration
+    std::string app_colors[2] = { "0xf2f5ea","0xd6dbd2" };
+    std::string element_colors[2] = { "0x945d5e","0x748cab" };
+    std::string text_color = "0x2c363f";
+    //-----------------------------------------------------------//
+    juce::AudioThumbnailCache thumbnailCache;
+    juce::AudioThumbnail thumbnail;
+
+    //-----------------------------------------------------------//
+
+    std::string imgstate = "Imagine: Drag an image to begin";
+
+    //-----------------------------------------------------------//
+
     ImagineAudioProcessorEditor (ImagineAudioProcessor&);
     ~ImagineAudioProcessorEditor() override;
 
@@ -55,18 +70,18 @@ public:
     juce::AudioSourcePlayer audioSourcePlayer;
     juce::AudioDeviceManager deviceManager;
 
-    juce::TextButton playButton{ "Play" };
-    juce::TextButton stopButton{ "Stop" };
+    //juce::TextButton playButton{ "Play" };
+    //juce::TextButton stopButton{ "Stop" };
 
 
     juce::GroupComponent generation_sliders;
 
 
-    void playButtonClicked();
-    void stopButtonClicked();
+    //void playButtonClicked();
+    //void stopButtonClicked();
     void changeState(TransportState newState);
     TransportState state;
-    void playWavFile();
+    //void playWavFile();
     void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default);
 
     juce::File getImageFile()
@@ -95,4 +110,6 @@ private:
     std::unique_ptr<juce::DocumentWindow> slider_window;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
+
+
 };
