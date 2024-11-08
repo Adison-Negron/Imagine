@@ -2,7 +2,6 @@
 #pragma once
 #include <JuceHeader.h>
 #include "PluginEditor.h"
-#include <array>
 
 class ImagineAudioProcessorEditor;
 
@@ -29,7 +28,6 @@ public:
 	juce::Slider& getLfoScalarAmplitudeSlider() { return lfo_scalar_amplitude; }
 	juce::Slider& getLfoIntensitySlider() { return lfo_intensity; }
 	juce::Slider& getLfoAmountScalarSlider() { return lfo_amount_scalar; }
-	void setPositionWithinGroup(juce::Component& group, juce::Slider& slider, juce::Label& label, float relX, float relY, float relWidth, float relHeight);
 
 private:
 

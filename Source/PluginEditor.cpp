@@ -36,11 +36,12 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     deviceManager.addAudioCallback(&audioSourcePlayer);
     audioSourcePlayer.setSource(&transportSource);
 
-    slider_window = std::make_unique<juce::DocumentWindow>("Generation Parameters", juce::Colours::lightgrey, juce::DocumentWindow::closeButton | juce::DocumentWindow::minimiseButton);
+    slider_window = std::make_unique<juce::DocumentWindow>("Generation Parameters", juce::Colours::lightgrey, juce::DocumentWindow::allButtons);
     windowComponent = new SliderWindow(this);
     slider_window->setContentOwned(windowComponent, true);
     slider_window->setVisible(false);
     slider_window->setBounds(0, 0, 400, 950);
+    slider_window->setResizable(false, false);
 
 }
 
