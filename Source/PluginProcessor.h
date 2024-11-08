@@ -62,7 +62,11 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     void loadSound(juce::File& soundpath);
+  
+
+
     void callPythonFunction(const std::string& img_path,
+
         const std::string& out_path,
         int kernel_size,
         int step_size,

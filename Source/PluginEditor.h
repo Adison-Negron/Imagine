@@ -33,6 +33,9 @@ public:
 
     //-----------------------------------------------------------//
 
+    std::string imgstate = "Imagine: Drag an image to begin";
+
+    //-----------------------------------------------------------//
 
     ImagineAudioProcessorEditor (ImagineAudioProcessor&);
     ~ImagineAudioProcessorEditor() override;

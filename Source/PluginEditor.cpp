@@ -93,7 +93,7 @@ void ImagineAudioProcessorEditor::paint (juce::Graphics& g)
     }
     else
     {
-        g.drawText("No File Loaded", getLocalBounds(), juce::Justification::centred, true);
+        g.drawText(imgstate, getLocalBounds(), juce::Justification::centred, true);
     }
 }
 
@@ -134,6 +134,24 @@ void ImagineAudioProcessorEditor::deleteFiles(const juce::File& folder)
 
 void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
 {
+    imgstate = "Path Loaded. Change parameters and Generate sound";
+    thumbnail.clear();
+    repaint();  // Repaint the editor to show the cleared thumbnail
+    audioProcessor.mSampler.clearSounds();
+
+//Default values
+    windowComponent->getKernelSlider().setValue(25);
+    windowComponent->getStepSlider().setValue(10);
+    windowComponent->getSoundLevelSlider().setValue(1);
+    windowComponent->getSoundDurationSlider().setValue(10);
+    windowComponent->getModulationIntensitySlider().setValue(.8);
+    windowComponent->getModulationEnvelopeIntensitySlider().setValue(.2);
+    windowComponent->getModulationDurationSlider().setValue(6);
+    windowComponent->getLfoScalarFreqSlider().setValue(.5);
+    windowComponent->getLfoScalarAmplitudeSlider().setValue(1);
+    windowComponent->getOvertoneNumScalarSlider().setValue(1);
+    windowComponent->getLfoAmountScalarSlider().setValue(1);
+
 
     documentsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
     mainFolder = createFolderIfNotExists(documentsDir, "Imagine");
@@ -223,6 +241,7 @@ void ImagineAudioProcessorEditor::changeState(TransportState newState)
 
 void ImagineAudioProcessorEditor::generateSound()
 {
+    
     audioProcessor.mSampler.clearSounds();
     audioProcessor.callPythonFunction(imagePath,
         outputPath,
