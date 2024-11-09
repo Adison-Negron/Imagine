@@ -176,17 +176,16 @@ void ImagineAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    // Set gain value from the slider or parameter
+
+ ;  // Assuming gainSlider is accessible here
+    effectsChain.get<0>().setGainLinear(currentGain);
+    // Process sampler output
     mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
-    // Apply the gain to each sample in the buffer
-    for (int channel = 0; channel < totalNumOutputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer(channel);
-        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
-        {
-            channelData[sample] *= currentGain; // Apply the gain here
-        }
-    }
+    // Apply effects chain, which includes the gain adjustment
+    juce::dsp::AudioBlock<float> block(buffer);
+    effectsChain.process(juce::dsp::ProcessContextReplacing<float>(block));
 }
 
 //==============================================================================

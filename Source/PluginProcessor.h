@@ -66,14 +66,16 @@ public:
 
     void loadSound(juce::File& soundpath);
     bool firstload = true;
-    std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
-    juce::dsp::ProcessorChain<juce::dsp::Gain<float>> effectsChain;
+    
 
 
 
     //Parameter controls
     //===================================================================
     //Gain==============================
+
+    std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
+    juce::dsp::ProcessorChain<juce::dsp::Gain<float>> effectsChain;
     void setGain(float gainValue) { currentGain = gainValue; }
     float currentGain = 1.0f;
     
