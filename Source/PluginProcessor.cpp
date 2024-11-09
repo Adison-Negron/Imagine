@@ -223,13 +223,6 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
     float lfo_intensity,
     float lfo_amount_scalar) {
     // Run the embedded Python code
-    if (firstload) {
-
-        Py_Initialize();
-        firstload = false;
-
-    }
-
     std::string fullPythonCode = std::string(pyEmbedder->Pythoncode1) +
         std::string(pyEmbedder->Pythoncode2) +
         std::string(pyEmbedder->Pythoncode3) +
@@ -299,7 +292,6 @@ void ImagineAudioProcessor::callPythonFunction(const std::string& img_path,
         juce::Logger::outputDebugString("Cannot find function main_generation_handler");
     }
 
-    Py_XDECREF(pFunc);
 }
 
 
