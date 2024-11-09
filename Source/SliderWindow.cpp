@@ -37,7 +37,7 @@ SliderWindow::~SliderWindow()
 
 void SliderWindow::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    g.fillAll(editor->charcoal);
     g.setColour(juce::Colours::white);
     g.setFont(15.0f);
 }

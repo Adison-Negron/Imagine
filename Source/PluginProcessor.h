@@ -9,6 +9,7 @@
 #pragma once
 #include "Pyembedder.h"
 #include <JuceHeader.h>
+#include <juce_dsp/juce_dsp.h>
 
 #ifdef _DEBUG
 #undef _DEBUG
@@ -65,6 +66,19 @@ public:
 
     void loadSound(juce::File& soundpath);
     bool firstload = true;
+    std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
+    juce::dsp::ProcessorChain<juce::dsp::Gain<float>> effectsChain;
+
+
+
+    //Parameter controls
+    //===================================================================
+    //Gain==============================
+    void setGain(float gainValue) { currentGain = gainValue; }
+    float currentGain = 1.0f;
+    
+
+    
 ;
 
 
@@ -94,7 +108,7 @@ private:
 
     juce::AudioFormatManager mFormatManager;
     juce::AudioFormatReader* mFormatReader{ nullptr };
-    std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
+    
     std::unique_ptr<Pyembedder> pyEmbedder;
 
 

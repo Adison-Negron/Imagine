@@ -117,12 +117,16 @@ void ImagineAudioProcessor::changeProgramName (int index, const juce::String& ne
 {
 }
 
+
 //==============================================================================
 void ImagineAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
     mSampler.setCurrentPlaybackSampleRate(sampleRate);
+
+
+
 }
 
 void ImagineAudioProcessor::releaseResources()
@@ -173,6 +177,16 @@ void ImagineAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
         buffer.clear (i, 0, buffer.getNumSamples());
 
     mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+
+    // Apply the gain to each sample in the buffer
+    for (int channel = 0; channel < totalNumOutputChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer(channel);
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+        {
+            channelData[sample] *= currentGain; // Apply the gain here
+        }
+    }
 }
 
 //==============================================================================
@@ -199,6 +213,12 @@ void ImagineAudioProcessor::setStateInformation (const void* data, int sizeInByt
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
 }
+
+class ImagineSynth : public juce::SynthesiserSound {
+public:
+    bool appliesToNote(int /*midiNoteNumber*/) override { return true; }
+    bool appliesToChannel(int /*midiChannel*/) override { return true; }
+};
 
 //==============================================================================
 // This creates new instances of the plugin..

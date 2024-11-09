@@ -12,14 +12,15 @@
 
 //==============================================================================
 ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(5),  // Initialize the thumbnail cache with a cache size of 5
-    thumbnail(512, formatManager, thumbnailCache)
+    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(1),  // Initialize the thumbnail cache with a cache size of 5
+    thumbnail(1024, formatManager, thumbnailCache)
 {   
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
     setSize (1280, 720);
     state = (Stopping);
+    setResizable(false, false);
 
     //addAndMakeVisible(&playButton);
     //playButton.onClick = [this] { playButtonClicked(); };
@@ -35,6 +36,68 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
 
 
     // Optionally, add more items to mainFlexBox as needed
+    // 
+    // 
+    // 
+    // 
+    // Buttons:
+    // 
+    // 
+    // 
+    //---------------------------------------------------------//
+
+     // Initialize knobs
+    addAndMakeVisible(paramslider1);
+    paramslider1.setSliderStyle(juce::Slider::Rotary);
+    paramslider1.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    paramslider1.setRange(0.0, 1.0); // Example range
+    paramslider1.setValue(0.5);       // Default value
+
+    addAndMakeVisible(paramslider2);
+    paramslider2.setSliderStyle(juce::Slider::Rotary);
+    paramslider2.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    paramslider2.setRange(0.0, 1.0);
+    paramslider2.setValue(0.5);
+
+    addAndMakeVisible(paramslider3);
+    paramslider3.setSliderStyle(juce::Slider::Rotary);
+    paramslider3.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    paramslider3.setRange(0.0, 1.0);
+    paramslider3.setValue(0.5);
+
+    addAndMakeVisible(paramslider4);
+    paramslider4.setSliderStyle(juce::Slider::Rotary);
+    paramslider4.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    paramslider4.setRange(0.0, 1.0);
+    paramslider4.setValue(0.5);
+
+
+
+    gainSlider.setRange(0.0, 10.0, 0.05);  // Set range from 0 (mute) to 1 (full gain)
+    gainSlider.setValue(1);             // Default gain value
+    gainSlider.addListener(this);         // Make this editor a listener
+    addAndMakeVisible(gainSlider);
+
+    // Gain label setup
+  
+    gainSlider.setColour(juce::Slider::thumbColourId, juce::Colours::white);
+    gainSlider.setColour(juce::Slider::backgroundColourId, charcoal);
+    gainSlider.setColour(juce::Slider::textBoxTextColourId, charcoal);
+    gainSlider.setColour(juce::Slider::textBoxBackgroundColourId, ivory);
+    gainLabel.setText("Gain", juce::dontSendNotification);
+    gainSlider.setSliderStyle(juce::Slider::Rotary);
+
+
+    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow,false,100,40);
+
+
+    gainLabel.attachToComponent(&gainSlider, false);
+
+    addAndMakeVisible(gainLabel);
+
+
+    //--------------------------------------------------------------------------------------------//
+
 
 
     formatManager.registerBasicFormats();
@@ -47,6 +110,11 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     slider_window->setContentOwned(windowComponent, true);
     slider_window->setVisible(false);
     slider_window->setBounds(0, 0, 400, 950);
+
+
+
+
+
 
 }
 
@@ -71,31 +139,69 @@ void ImagineAudioProcessorEditor::addSlider(juce::Slider& slider, juce::Label& l
     addAndMakeVisible(label);
 }
 
+
+
+//Parameters=================================================================
+
 void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
+    if (slider == &gainSlider) {
+        audioProcessor.setGain(gainSlider.getValue());
+    }
+}
 
+
+
+
+
+void drawFilledBoundWithBorder(juce::Graphics& g, juce::Rectangle<int> bounds, juce::Colour fillColour, juce::Colour borderColour, int borderWidth)
+{
+    // Fill with the specified color
+    g.setColour(fillColour);
+    g.fillRect(bounds);
+
+    // Draw the border
+    g.setColour(borderColour);
+    g.drawRect(bounds, borderWidth);
 }
 
 //==============================================================================
-void ImagineAudioProcessorEditor::paint (juce::Graphics& g)
+void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (juce::Colour::fromString(app_colors[1]));
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (15.0f));
-    //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+    // Define colors for the sections
+    juce::Colour topFillColour = topcolor;
+    juce::Colour bottomFillColour = bottomcolor;
+    juce::Colour topBorderColour = topbordercolor;
+    juce::Colour bottomBorderColour = bottombordercolor;
 
+    auto bounds = getLocalBounds();
+    auto topBounds = bounds.removeFromTop(bounds.getHeight() * 0.4);
+    auto bottomBounds = bounds;
+
+    // Draw filled bounds with borders using the helper function
+    drawFilledBoundWithBorder(g, topBounds, topFillColour, topBorderColour, 2);
+    drawFilledBoundWithBorder(g, bottomBounds, bottomFillColour, bottomBorderColour, 2);
+
+    // Draw the waveform in the top section if available
     if (thumbnail.getTotalLength() > 0.0)
     {
-        auto area = getLocalBounds().reduced(10); // Set drawing area with padding
-        thumbnail.drawChannels(g, area, 0.0, thumbnail.getTotalLength(), 1.0f);
+        g.setColour(juce::Colours::white);
+        thumbnail.drawChannels(g, topBounds, 0.0, thumbnail.getTotalLength(), 1.0f);
     }
     else
     {
-        g.drawText(imgstate, getLocalBounds(), juce::Justification::centred, true);
+        g.setColour(juce::Colours::white);
+        g.drawText(imgstate, topBounds, juce::Justification::centred);
     }
 }
 
+
+void  buttonsliderorganizer(int numberofsliders, int numberofbuttons,juce::TextButton buttonarray[], juce::Slider sliderarray[]) {
+
+
+
+
+}
 
 void ImagineAudioProcessorEditor::resized()
 {
@@ -103,6 +209,41 @@ void ImagineAudioProcessorEditor::resized()
     // subcomponents in your editor..
     //playButton.setBounds(10, 10, 100, 30);
     //stopButton.setBounds(120, 10, 100, 30);
+
+    // Define larger width and height for each knob
+    constexpr int knobWidth = 120;
+    constexpr int knobHeight = 120;
+    const int numKnobs = 4;
+
+    // Calculate horizontal spacing between knobs (set to 0 for no space)
+    int spacing = 0;
+
+    // Set yPosition to the top of the bottom region
+    int yPosition = getHeight() * 1.5 / 3; // Adjust this if necessary
+    int rightcorner = getWidth()-50;
+    //for (int i = 0; i < numKnobs; ++i)
+    //{
+    //    juce::Slider* knob = nullptr;
+    //    switch (i) {
+    //    case 0: knob = &paramslider1; break;
+    //    case 1: knob = &paramslider2; break;
+    //    case 2: knob = &paramslider3; break;
+    //    case 3: knob = &paramslider4; break;
+    //    }
+    //    if (knob != nullptr)
+    //    {
+    //        // Adjust the size and position of each knob with no spacing
+    //        knob->setBounds(spacing + i * (knobWidth + spacing), yPosition, knobWidth, knobHeight);
+    //        knob->setSliderStyle(juce::Slider::Rotary);
+    //        knob->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
+    //    }
+    //}
+
+    //=====================================================================
+    //GainSlider
+
+    gainSlider.setBounds(rightcorner - 150, yPosition+150, 200,150);
+    
 
 }
 
@@ -259,7 +400,11 @@ void ImagineAudioProcessorEditor::generateSound()
     
     //slider_window->setVisible(false);
     audioProcessor.loadSound(audioProcessor.outputpath);
+    int numSamples = audioProcessor.mainbuffer->getNumSamples();
+    int numChannels = audioProcessor.mainbuffer->getNumChannels();
+   
     thumbnail.setSource(new juce::FileInputSource(audioProcessor.outputpath));
+
     repaint();
 }
 
