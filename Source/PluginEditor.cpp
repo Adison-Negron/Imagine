@@ -28,6 +28,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
 
 
 
+
     //addAndMakeVisible(&stopButton);
     //stopButton.onClick = [this] { stopButtonClicked(); };
     //stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
@@ -78,6 +79,8 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     gainSlider.addListener(this);         // Make this editor a listener
     addAndMakeVisible(gainSlider);
 
+ 
+
     // Gain label setup
   
     gainSlider.setColour(juce::Slider::thumbColourId, juce::Colours::white);
@@ -111,7 +114,11 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     slider_window->setVisible(false);
     slider_window->setBounds(0, 0, 400, 950);
 
+    bounds = getLocalBounds();
+    topBounds = bounds.removeFromTop(bounds.getHeight() * 0.4);
 
+    startPosition = 0;
+    endPosition = 480000;
 
 
 
@@ -145,9 +152,48 @@ void ImagineAudioProcessorEditor::addSlider(juce::Slider& slider, juce::Label& l
 
 void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
-    if (slider == &gainSlider) {
-        audioProcessor.setGain(gainSlider.getValue());
+
+}
+
+void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
+{
+    if (topBounds.contains(event.getPosition()))
+    {
+        int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
+        float clickPosition = static_cast<float>(event.getPosition().x) / topBounds.getWidth();
+        if (event.mods.isLeftButtonDown())
+        {
+            startPosition = static_cast<int>(clickPosition * numSamples);
+        }
+        else if (event.mods.isRightButtonDown())
+        {
+            endPosition = static_cast<int>(clickPosition * numSamples);
+        }
+
+        if (startPosition >= endPosition)
+        {
+            std::swap(startPosition, endPosition);
+        }
+
+        repaint();
+        audioProcessor.onBlockChange(startPosition, endPosition);
     }
+}
+
+void ImagineAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (event.mods.isLeftButtonDown())
+    {
+        startPosition = 0;
+        endPosition = audioProcessor.mainbuffer->getNumSamples();
+    }
+    else if (event.mods.isRightButtonDown())
+    {
+        startPosition = 0;
+        endPosition = audioProcessor.mainbuffer->getNumSamples();
+    }
+    repaint();
+    audioProcessor.onBlockChange(startPosition, endPosition);
 }
 
 
@@ -187,6 +233,14 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     {
         g.setColour(juce::Colours::white);
         thumbnail.drawChannels(g, topBounds, 0.0, thumbnail.getTotalLength(), 1.0f);
+        int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
+        float start = (static_cast<float>(startPosition) / numSamples) * topBounds.getWidth();
+        float end = (static_cast<float>(endPosition) / numSamples) * topBounds.getWidth();
+
+   
+        g.setColour(juce::Colours::red);  
+        g.drawLine(topBounds.getX() + start, topBounds.getY(), topBounds.getX() + start, topBounds.getBottom());
+        g.drawLine(topBounds.getX() + end, topBounds.getY(), topBounds.getX() + end, topBounds.getBottom());     
     }
     else
     {
@@ -406,5 +460,9 @@ void ImagineAudioProcessorEditor::generateSound()
     thumbnail.setSource(new juce::FileInputSource(audioProcessor.outputpath));
 
     repaint();
+    if (audioProcessor.selectedBlock != nullptr)
+    {
+        audioProcessor.selectedBlock->clear();
+    }
+    
 }
-

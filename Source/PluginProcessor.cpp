@@ -331,10 +331,95 @@ void ImagineAudioProcessor::loadSound(juce::File& filepath) {
         mainbuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
         reader->read(mainbuffer.get(), 0, reader->lengthInSamples, 0, true, true);
     }
-
     mSampler.addSound(new juce::SamplerSound("Sample", *mFormatReader, range, 60, 0.1, 0.1, 10));
-    
 
 }
+
+void ImagineAudioProcessor::onBlockChange(int start, int end)
+{
+    int blockSize = end - start;
+    if (blockSize > 0)
+    {
+        selectedBlock = std::make_unique<juce::AudioBuffer<float>>(mainbuffer->getNumChannels(), blockSize);
+
+        for (int channel = 0; channel < mainbuffer->getNumChannels(); ++channel)
+        {
+            selectedBlock->copyFrom(channel, 0, *mainbuffer, channel, start, blockSize);
+        }
+
+        int firstBlockSize = start;
+        firstBlock = std::make_unique<juce::AudioBuffer<float>>(mainbuffer->getNumChannels(), firstBlockSize);
+        for (int channel = 0; channel < mainbuffer->getNumChannels(); ++channel)
+        {
+            firstBlock->copyFrom(channel, 0, *mainbuffer, channel, 0, firstBlockSize);
+        }
+        int lastBlockSize = mainbuffer->getNumSamples() - end;
+        lastBlock = std::make_unique<juce::AudioBuffer<float>>(mainbuffer->getNumChannels(), lastBlockSize);
+        for (int channel = 0; channel < mainbuffer->getNumChannels(); ++channel)
+        {
+            lastBlock->copyFrom(channel, 0, *mainbuffer, channel, end, lastBlockSize);
+        }
+
+
+        juce::File outputFile = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+            .getChildFile("Imagine")
+            .getChildFile("temp")
+            .getChildFile("block.wav");
+        outputFile.deleteFile();
+        // Make sure the directory exists, if not create it
+        if (!outputFile.getParentDirectory().exists())
+        {
+            if (!outputFile.getParentDirectory().createDirectory())
+            {
+                DBG("Error: Failed to create directory: " << outputFile.getParentDirectory().getFullPathName());
+                return;
+            }
+        }
+
+        juce::WavAudioFormat wavFormat;
+        std::unique_ptr<juce::FileOutputStream> outputStream(outputFile.createOutputStream());
+        std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(outputStream.get(),
+            getSampleRate(),
+            selectedBlock->getNumChannels(),
+            16,    
+            {},    
+            0));   
+
+        if (writer == nullptr)
+        {
+            DBG("Error Creating WAV File Writer!");
+            return;
+        }
+
+        bool writeResult = writer->writeFromAudioSampleBuffer(*selectedBlock, 0, selectedBlock->getNumSamples());
+        if (!writeResult)
+        {
+            DBG("Error writing to WAV file");
+            return;
+        }
+
+
+        DBG("WAV file saved successfully!");
+        writer->flush();
+        outputStream->flush();
+        outputStream.release();
+        mFormatReader = mFormatManager.createReaderFor(outputFile);
+
+        std::unique_ptr<juce::AudioFormatReader> reader(mFormatManager.createReaderFor(outputFile));
+        if (reader == nullptr)
+        {
+            selectedBlock = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
+            reader->read(selectedBlock.get(), 0, reader->lengthInSamples, 0, true, true);
+            return;
+        }
+
+        juce::BigInteger selectedRange;
+        selectedRange.setRange(0, 128, true);
+        mSampler.clearSounds();
+        mSampler.addSound(new juce::SamplerSound("Selected Block", *reader, selectedRange, 60, 0.1, 0.1, 10));
+    }
+}
+
+
 
 

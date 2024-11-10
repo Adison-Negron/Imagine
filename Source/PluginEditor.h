@@ -29,7 +29,7 @@ class SliderWindow;
 
 
 
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener
+class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener
 {
 public:
 
@@ -119,6 +119,12 @@ public:
     //juce::TextButton playButton{ "Play" };
     //juce::TextButton stopButton{ "Stop" };
 
+    juce::TextButton block{ "Play Block" };
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseDoubleClick(const juce::MouseEvent& event);
+    juce::Rectangle<int> bounds;
+    juce::Rectangle<int> topBounds;
+
 
     juce::GroupComponent generation_sliders;
 
@@ -140,6 +146,8 @@ public:
         this->imageFile = imageFile;
     }
     void generateSound();
+
+    int startPosition, endPosition;
 
 private:
     // This reference is provided as a quick way for your editor to

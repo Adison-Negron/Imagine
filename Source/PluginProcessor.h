@@ -66,6 +66,7 @@ public:
 
     void loadSound(juce::File& soundpath);
     bool firstload = true;
+    void onBlockChange(int start, int end);
     
 
 
@@ -75,6 +76,9 @@ public:
     //Gain==============================
 
     std::unique_ptr<juce::AudioBuffer<float>> mainbuffer;
+    std::unique_ptr<juce::AudioBuffer<float>> selectedBlock;
+    std::unique_ptr<juce::AudioBuffer<float>> firstBlock;
+    std::unique_ptr<juce::AudioBuffer<float>> lastBlock;
     juce::dsp::ProcessorChain<juce::dsp::Gain<float>> effectsChain;
     void setGain(float gainValue) { currentGain = gainValue; }
     float currentGain = 1.0f;
@@ -105,6 +109,8 @@ public:
     juce::File outputpath;
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
+
+
 
 private:
 
