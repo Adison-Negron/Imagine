@@ -120,9 +120,6 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     startPosition = 0;
     endPosition = 480000;
 
-
-
-
 }
 
 ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
@@ -157,44 +154,52 @@ void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 
 void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 {
-    if (topBounds.contains(event.getPosition()))
+    if (thumbnail.getTotalLength() > 0)
     {
-        int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
-        float clickPosition = static_cast<float>(event.getPosition().x) / topBounds.getWidth();
+        if (topBounds.contains(event.getPosition()))
+        {
+            int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
+            float clickPosition = static_cast<float>(event.getPosition().x) / topBounds.getWidth();
+            if (event.mods.isLeftButtonDown())
+            {
+                startPosition = static_cast<int>(clickPosition * numSamples);
+            }
+            else if (event.mods.isRightButtonDown())
+            {
+                endPosition = static_cast<int>(clickPosition * numSamples);
+            }
+
+            if (startPosition >= endPosition)
+            {
+                std::swap(startPosition, endPosition);
+            }
+
+            repaint();
+            audioProcessor.onBlockChange(startPosition, endPosition);
+        }
+    }
+
+}
+
+void ImagineAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (thumbnail.getTotalLength() > 0)
+    {
         if (event.mods.isLeftButtonDown())
         {
-            startPosition = static_cast<int>(clickPosition * numSamples);
+            startPosition = 0;
+            endPosition = audioProcessor.mainbuffer->getNumSamples();
         }
         else if (event.mods.isRightButtonDown())
         {
-            endPosition = static_cast<int>(clickPosition * numSamples);
+            startPosition = 0;
+            endPosition = audioProcessor.mainbuffer->getNumSamples();
         }
-
-        if (startPosition >= endPosition)
-        {
-            std::swap(startPosition, endPosition);
-        }
-
         repaint();
         audioProcessor.onBlockChange(startPosition, endPosition);
     }
 }
 
-void ImagineAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& event)
-{
-    if (event.mods.isLeftButtonDown())
-    {
-        startPosition = 0;
-        endPosition = audioProcessor.mainbuffer->getNumSamples();
-    }
-    else if (event.mods.isRightButtonDown())
-    {
-        startPosition = 0;
-        endPosition = audioProcessor.mainbuffer->getNumSamples();
-    }
-    repaint();
-    audioProcessor.onBlockChange(startPosition, endPosition);
-}
 
 
 
