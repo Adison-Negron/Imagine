@@ -68,7 +68,8 @@ public:
     bool firstload = true;
     void onBlockChange(int start, int end);
 
-
+    int samplenum;
+    int numChannels = getTotalNumOutputChannels();
 
     
 
@@ -99,7 +100,6 @@ public:
     std::unique_ptr<juce::AudioBuffer<float>> selectedBlock;
     std::unique_ptr<juce::AudioBuffer<float>> firstBlock;
     std::unique_ptr<juce::AudioBuffer<float>> lastBlock;
-    juce::dsp::ProcessorChain<juce::dsp::Gain<float>, juce::dsp::Reverb> effectsChain;
     void setGain(float gainValue) { currentGain = gainValue; }
     float currentGain = 1.0f;
     

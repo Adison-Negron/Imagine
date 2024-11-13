@@ -12,7 +12,7 @@
 
 //==============================================================================
 ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(2),  // Initialize the thumbnail cache with a cache size of 5
+    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(1),  // Initialize the thumbnail cache with a cache size of 5
     thumbnail(1024, formatManager, thumbnailCache)
 {   
 
@@ -133,7 +133,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     cur_q_val.setTextValueSuffix("");
     qfilterlbl.setText("Q", juce::dontSendNotification);
     cur_q_val.setSliderStyle(juce::Slider::Rotary);
-    cur_q_val.setRange(.5, 10, .5);
+    cur_q_val.setRange(.1, 10, .1);
     cur_q_val.addListener(this);
 
     is_enabledlabel.setText("Enable filter",juce::dontSendNotification);
@@ -432,18 +432,22 @@ void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 
         case 1:
             filter1q = cur_q_val.getValue();
+            updatefilters();
             break;
         case 2:
             filter2q = cur_q_val.getValue();
+            updatefilters();
             break;
         case 3:
             filter3q = cur_q_val.getValue();
+            updatefilters();
             break;
         case 4:
             filter1q = cur_q_val.getValue();
+            updatefilters();
             break;
 
-        updatefilters();
+        
         }
 
     }
@@ -582,8 +586,9 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     // Draw the waveform in the top section if available
     if (thumbnail.getTotalLength() > 0.0)
     {
+        double displayLength = 10.0; // Display only the first 10 seconds
         g.setColour(juce::Colours::white);
-        thumbnail.drawChannels(g, topBounds, 0.0, thumbnail.getTotalLength(), 1.0f);
+        thumbnail.drawChannels(g, topBounds, 0.0, std::min(displayLength, thumbnail.getTotalLength()), 1.0f);
         int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
         float start = (static_cast<float>(startPosition) / numSamples) * topBounds.getWidth();
         float end = (static_cast<float>(endPosition) / numSamples) * topBounds.getWidth();
@@ -663,7 +668,7 @@ void ImagineAudioProcessorEditor::resized()
 
     int rsliderWidth = 130;
     int rsliderHeight = 100;
-    int rgroupX = bottomBounds.getCentreX() - 150;
+    int rgroupX = bottomBounds.getCentreX() - 250;
     int rgroupY = bottomBounds.getY() + 5;
     int rsliderY = rgroupY + 30;
     int rmarginX = 80;
@@ -710,6 +715,7 @@ void ImagineAudioProcessorEditor::deleteFiles(const juce::File& folder)
 void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, int /*x*/, int /*y*/)
 {
     imgstate = "Path Loaded. Change parameters and Generate sound";
+
     thumbnail.clear();
     repaint();  // Repaint the editor to show the cleared thumbnail
     audioProcessor.mSampler.clearSounds();
@@ -766,35 +772,18 @@ juce::File ImagineAudioProcessorEditor::createFolderIfNotExists(const juce::File
     return folder;
 }
 
-
-void ImagineAudioProcessorEditor::changeState(TransportState newState)
-{
-    if (state != newState)
-    {
-        state = newState;
-
-        switch (state)
-        {
-        case Starting:
-            //playWavFile();
-            transportSource.start();
-            break;
-
-        case Stopping:
-            transportSource.stop();
-            break;
-        }
-    }
-}
-
 void ImagineAudioProcessorEditor::generateSound()
 {
-    
+    // Clear the existing thumbnail and sounds
+    thumbnail.clear();
+    repaint();
     audioProcessor.mSampler.clearSounds();
+
+    // Generate sound by calling the Python function
     audioProcessor.callPythonFunction(imagePath,
         outputPath,
-        (int) windowComponent-> getKernelSlider().getValue(),
-        (int) windowComponent->getStepSlider().getValue(),
+        (int)windowComponent->getKernelSlider().getValue(),
+        (int)windowComponent->getStepSlider().getValue(),
         windowComponent->getSoundLevelSlider().getValue(),
         windowComponent->getSoundDurationSlider().getValue(),
         windowComponent->getModulationDurationSlider().getValue(),
@@ -805,20 +794,29 @@ void ImagineAudioProcessorEditor::generateSound()
         windowComponent->getLfoScalarAmplitudeSlider().getValue(),
         windowComponent->getLfoIntensitySlider().getValue(),
         windowComponent->getLfoAmountScalarSlider().getValue());
-    
-    //slider_window->setVisible(false);
-    audioProcessor.loadSound(audioProcessor.outputpath);
-    int numSamples = audioProcessor.mainbuffer->getNumSamples();
-    int numChannels = audioProcessor.mainbuffer->getNumChannels();
-   
-    thumbnail.setSource(new juce::FileInputSource(audioProcessor.outputpath));
 
-    repaint();
+
+    // Load the generated sound
+    audioProcessor.loadSound(audioProcessor.outputpath);
+
+    // Verify that the output file exists and set it as the source
+    DBG("Path is " + audioProcessor.outputpath.getFileName());
+    juce::File generatedFile(audioProcessor.outputpath);
+    if (generatedFile.existsAsFile())
+    {
+        thumbnail.setSource(new juce::FileInputSource(generatedFile));
+        repaint();  // Repaint to show the updated thumbnail
+    }
+    else
+    {
+        DBG("Generated file does not exist: ");
+    }
+
+    // Clear selected block if it exists
     if (audioProcessor.selectedBlock != nullptr)
     {
         audioProcessor.selectedBlock->clear();
     }
-    
 }
 
 int ImagineAudioProcessorEditor::findtoggledfilter() {
@@ -957,4 +955,14 @@ void ImagineAudioProcessorEditor::onFilterToggled(juce::Button* toggledButton)
         }
 
     }
+}
+
+void ImagineAudioProcessorEditor::loadThumbnailAsync(const juce::File& file)
+{
+    juce::FileInputSource* fileSource = new juce::FileInputSource(file);
+    juce::Thread::launch([this, fileSource]()
+        {
+            thumbnail.setSource(fileSource); // This might take some time
+            juce::MessageManager::callAsync([this]() { repaint(); }); // Repaint once loaded
+        });
 }

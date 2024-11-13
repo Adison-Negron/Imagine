@@ -78,7 +78,7 @@ public:
     juce::ToggleButton filter1{ "Filter 1" }, filter2{ "Filter 2" }, filter3{ "Filter 3" }, filter4{ "Filter 4" };
     bool istoggled_fil1{false}, istoggled_fil2{ false }, istoggled_fil3{ false }, istoggled_fil4{ false };
     int filter1freq{20}, filter2freq{ 20 }, filter3freq{ 20 }, filter4freq{ 20 }, tempfreq{ 20 };
-    float filter1q{ 0.5 }, filter2q{ 0.5 }, filter3q{ 0.5 }, filter4q{ 0.5 }, tempq{ 0.5 };
+    float filter1q{ 0.1 }, filter2q{ 0.1 }, filter3q{ 0.1 }, filter4q{ 0.1 }, tempq{ 0.1};
 
 
 
@@ -176,6 +176,8 @@ public:
 
     juce::TextButton saveButton;
     juce::TextButton loadButton; 
+
+    void loadThumbnailAsync(const juce::File& file);
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
