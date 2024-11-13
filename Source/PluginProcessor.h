@@ -111,7 +111,11 @@ public:
     juce::AudioParameterFloat* reverbDry;
     juce::AudioParameterFloat* reverbWidth;
     juce::AudioParameterBool* reverbEnabled;
-    //Resample===============================
+    //ADSR===============================
+    juce::ADSR adsr;
+    juce::ADSR::Parameters adsrParams;
+
+    void updateADSRParameters(float attack, float decay, float sustain, float release);
 
 
     void setFilter(int filterIndex, std::string type, int frequency, float qFactor);

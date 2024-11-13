@@ -145,6 +145,17 @@ void ImagineAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     filter2.prepare(spec);
     filter3.prepare(spec);
     filter4.prepare(spec);
+
+    // Configure ADSR with sample rate
+    adsr.setSampleRate(sampleRate);
+
+    // Default ADSR settings (optional)
+    adsrParams.attack = 0.0f;
+    adsrParams.decay = 0.0f;
+    adsrParams.sustain = 1.0f;
+    adsrParams.release = 0.0f;
+    adsr.setParameters(adsrParams);
+    adsr.reset();
 }
 
 void ImagineAudioProcessor::releaseResources()
@@ -187,10 +198,22 @@ void ImagineAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     for (int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    // Render the sample block
-    mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+    // Check MIDI buffer for note-on and note-off events to control ADSR
+    for (const auto metadata : midiMessages)
+    {
+        auto message = metadata.getMessage();
+        if (message.isNoteOn())
+        {
+            adsr.noteOn();
+        }
+        else if (message.isNoteOff())
+        {
+            adsr.noteOff();
+        }
+    }
 
-    // Apply gain
+    // Render the sample block and apply gain
+    mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
     auto& gain = effectsChain.get<0>();
     gain.setGainLinear(currentGain);
     juce::dsp::AudioBlock<float> block(buffer);
@@ -216,6 +239,11 @@ void ImagineAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     if (filter2_enabled) filter2.process(juce::dsp::ProcessContextReplacing<float>(block));
     if (filter3_enabled) filter3.process(juce::dsp::ProcessContextReplacing<float>(block));
     if (filter4_enabled) filter4.process(juce::dsp::ProcessContextReplacing<float>(block));
+
+    // Apply ADSR envelope to the buffer
+    adsr.applyEnvelopeToBuffer(buffer, 0, buffer.getNumSamples());
+
+    // Push buffer to visualizer
     waveviewer.pushBuffer(buffer);
 }
 
@@ -577,6 +605,15 @@ void ImagineAudioProcessor::setFilter(int filterIndex, std::string type, int fre
             break;
         }
     }
+}
+
+void ImagineAudioProcessor::updateADSRParameters(float attack, float decay, float sustain, float release)
+{
+    adsrParams.attack = attack;
+    adsrParams.decay = decay;
+    adsrParams.sustain = sustain;
+    adsrParams.release = release;
+    adsr.setParameters(adsrParams);
 }
 
 

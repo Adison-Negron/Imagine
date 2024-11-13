@@ -103,9 +103,16 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     addAndMakeVisible(is_enabledlabel);
     addAndMakeVisible(freqfilterlbl);
     addAndMakeVisible(qfilterlbl);
-
-
     addAndMakeVisible(audioProcessor.waveviewer);
+
+
+    initializeSlider(attackSlider, attacklabel, "Attack", 0.1f, 5.0f, 0.0f, 0.01f);
+    initializeSlider(decaySlider, decaylabel, "Decay", 0.1f, 5.0f, 0.0f, 0.01f);
+    initializeSlider(sustainSlider, sustainlabel, "Sustain", 0.0f, 1.0f, 1.0f, 0.01f);
+    initializeSlider(releaseSlider, releaselabel, "Release", 0.1f, 5.0f, 0.0f, 0.01f);
+
+
+
     audioProcessor.waveviewer.setColours(gunmetal, juce::Colours::whitesmoke.withAlpha(0.5f));
 
 
@@ -144,6 +151,11 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     cur_q_val.setSliderStyle(juce::Slider::Rotary);
     cur_q_val.setRange(.1, 5, .1);
     cur_q_val.addListener(this);
+
+
+    
+
+
 
     is_enabledlabel.setText("Enable filter",juce::dontSendNotification);
     is_enabledlabel.setColour(juce::Label::backgroundColourId, charcoal);
@@ -280,6 +292,28 @@ ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
     deviceManager.removeAudioCallback(&audioSourcePlayer);
 }
 
+
+void ImagineAudioProcessorEditor::initializeSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText,
+    float minValue, float maxValue, float defaultValue, float interval)
+{
+    // Slider style settings
+    slider.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    slider.setColour(juce::Slider::backgroundColourId, charcoal);
+    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    slider.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    slider.setSliderStyle(juce::Slider::Rotary);
+    slider.setRange(minValue, maxValue, interval);
+    slider.setValue(defaultValue);
+    slider.addListener(this);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    addAndMakeVisible(slider);
+
+    // Label settings
+    label.setText(labelText, juce::dontSendNotification);
+    label.setJustificationType(juce::Justification::centred);
+    label.attachToComponent(&slider, false);
+    addAndMakeVisible(label);
+}
 
 void ImagineAudioProcessorEditor::addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default)
 {
@@ -461,6 +495,12 @@ void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
         }
 
     }
+
+    if (slider == &attackSlider || slider == &decaySlider || slider == &sustainSlider || slider == &releaseSlider) {
+
+        audioProcessor.updateADSRParameters(attackSlider.getValue(), decaySlider.getValue(), sustainSlider.getValue(), releaseSlider.getValue());
+
+    }
 }
 
 void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
@@ -632,6 +672,9 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     int freq_q_lblpos = filterbuttonpos + 140;
     int filtercomboposy = filterbuttonpos + 240;
 
+    int envelopesectiony = filtercomboposy + 75;
+
+
     Filterlbl.setBounds(50, filterlblpos, 100, 30);
     filter1.setBounds(50, filterbuttonpos + 50, 50, 30);
 
@@ -652,6 +695,11 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     curfiltertype_combobox.onChange = [this]() {
         updatefilters();
         };
+
+    attackSlider.setBounds(0, envelopesectiony, 140, 90);
+    decaySlider.setBounds(100, envelopesectiony, 140, 90);
+    sustainSlider.setBounds(200, envelopesectiony , 140, 90);
+    releaseSlider.setBounds(300 , envelopesectiony , 140, 90);
 }
 
 
@@ -680,7 +728,7 @@ void ImagineAudioProcessorEditor::resized()
 
     int rsliderWidth = 130;
     int rsliderHeight = 100;
-    int rgroupX = bottomBounds.getCentreX() - 250;
+    int rgroupX = bottomBounds.getCentreX() - 220;
     int rgroupY = bottomBounds.getY() + 5;
     int rsliderY = rgroupY + 30;
     int rmarginX = 80;
@@ -985,7 +1033,7 @@ void ImagineAudioProcessorEditor::drawLiveBuffer(juce::Graphics& g, juce::Rectan
     auto* buffer = audioProcessor.getLiveBuffer();
     if (buffer == nullptr || buffer->getNumSamples() == 0) return;
 
-    g.setColour(juce::Colours::green);
+    g.setColour(juce::Colours::whitesmoke.withAlpha(0.5f));
     int numChannels = buffer->getNumChannels();
     int numSamples = buffer->getNumSamples();
     float verticalScale = bounds.getHeight() / (float)numChannels;
