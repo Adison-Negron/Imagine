@@ -672,7 +672,7 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     int freq_q_lblpos = filterbuttonpos + 140;
     int filtercomboposy = filterbuttonpos + 240;
 
-    int envelopesectiony = filtercomboposy + 60;
+    int envelopesectiony = filtercomboposy + 75;
 
 
     Filterlbl.setBounds(50, filterlblpos, 100, 30);

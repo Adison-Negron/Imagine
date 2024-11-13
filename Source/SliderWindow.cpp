@@ -5,7 +5,7 @@ SliderWindow::SliderWindow(ImagineAudioProcessorEditor* editor) : editor(editor)
 {
     setSize(400, 950);
     
-    addSlider(kernel, kernel_label, "Kernel Size", 0, 100, 25,1);
+    addSlider(kernel, kernel_label, "Kernel Size", 0, 50, 25,1);
     addSlider(step, step_label, "Step Size", 0, 50, 10,1);
     addSlider(sound_level, sound_label, "Level", 0, 10, 1,.1);
     addSlider(sound_duration, duration_label, "Time", 0, 30, 10,1);
