@@ -67,6 +67,26 @@ public:
     void loadSound(juce::File& soundpath);
     bool firstload = true;
     void onBlockChange(int start, int end);
+
+
+
+    
+
+
+
+    //Audio Effects
+    //===============================================================================
+    //Audio Processor                   //Gain                       
+    juce::dsp::ProcessorChain<juce::dsp::Gain<float>,juce::dsp::Reverb> effectsChain;
+                                       //Filters
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> filter1;
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> filter2;
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> filter3;
+    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> filter4;
+
+    // Flags to enable/disable each filter
+    bool filter1_enabled = false, filter2_enabled = false, filter3_enabled = false, filter4_enabled = false;
+
     
 
 
@@ -84,7 +104,7 @@ public:
     float currentGain = 1.0f;
     
 
-    
+    void setFilter(int filterIndex, std::string type, int frequency, float qFactor);
 ;
 
 
