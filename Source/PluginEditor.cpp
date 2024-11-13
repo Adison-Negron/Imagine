@@ -15,12 +15,16 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(1),  // Initialize the thumbnail cache with a cache size of 5
     thumbnail(1024, formatManager, thumbnailCache)
 {   
-
+    
+    juce::Timer::startTimer(30);  // 30 ms update interval for ~30 FPS
     setSize (1280, 720);
     state = (Stopping);
     setResizable(false, false);
 
-
+    viewToggle.setButtonText("Live View");
+    viewToggle.setToggleState(false, juce::dontSendNotification); // Start in thumbnail view
+    viewToggle.onClick = [this]() { repaint(); }; // Repaint on toggle
+    addAndMakeVisible(viewToggle);
 
     // Optionally, add more items to mainFlexBox as needed
     // 
@@ -100,6 +104,11 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     addAndMakeVisible(freqfilterlbl);
     addAndMakeVisible(qfilterlbl);
 
+
+    addAndMakeVisible(audioProcessor.waveviewer);
+    audioProcessor.waveviewer.setColours(gunmetal, juce::Colours::whitesmoke.withAlpha(0.5f));
+
+
     filter1.onClick = [this]() { onFilterToggled(&filter1); };
     filter2.onClick = [this]() { onFilterToggled(&filter2); };
     filter3.onClick = [this]() { onFilterToggled(&filter3); };
@@ -123,7 +132,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     curfilterfreq.setTextValueSuffix("hz");
     freqfilterlbl.setText("Frequency", juce::dontSendNotification);
     curfilterfreq.setSliderStyle(juce::Slider::Rotary);
-    curfilterfreq.setRange(20, 20000, 10);
+    curfilterfreq.setRange(20, 5000, 5);
     curfilterfreq.addListener(this);
 
     cur_q_val.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
@@ -133,7 +142,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     cur_q_val.setTextValueSuffix("");
     qfilterlbl.setText("Q", juce::dontSendNotification);
     cur_q_val.setSliderStyle(juce::Slider::Rotary);
-    cur_q_val.setRange(.1, 10, .1);
+    cur_q_val.setRange(.1, 5, .1);
     cur_q_val.addListener(this);
 
     is_enabledlabel.setText("Enable filter",juce::dontSendNotification);
@@ -266,6 +275,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
 
 ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
 {
+    stopTimer();
     audioSourcePlayer.setSource(nullptr);
     deviceManager.removeAudioCallback(&audioSourcePlayer);
 }
@@ -457,29 +467,26 @@ void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 {
     if (thumbnail.getTotalLength() > 0)
     {
-        if (topBounds.contains(event.getPosition()))
+        auto numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
+        float clickPosition = static_cast<float>(event.getPosition().x) / getWidth();
+
+        if (event.mods.isLeftButtonDown())
         {
-            int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
-            float clickPosition = static_cast<float>(event.getPosition().x) / topBounds.getWidth();
-            if (event.mods.isLeftButtonDown())
-            {
-                startPosition = static_cast<int>(clickPosition * numSamples);
-            }
-            else if (event.mods.isRightButtonDown())
-            {
-                endPosition = static_cast<int>(clickPosition * numSamples);
-            }
-
-            if (startPosition >= endPosition)
-            {
-                std::swap(startPosition, endPosition);
-            }
-
-            repaint();
-            audioProcessor.onBlockChange(startPosition, endPosition);
+            startPosition = juce::jlimit(0, numSamples - 1, static_cast<int>(clickPosition * numSamples));
         }
-    }
+        else if (event.mods.isRightButtonDown())
+        {
+            endPosition = juce::jlimit(0, numSamples - 1, static_cast<int>(clickPosition * numSamples));
+        }
 
+        if (startPosition >= endPosition)
+        {
+            std::swap(startPosition, endPosition);
+        }
+
+        repaint();
+        audioProcessor.onBlockChange(startPosition, endPosition);
+    }
 }
 
 void ImagineAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& event)
@@ -584,32 +591,40 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     drawFilledBoundWithBorder(g, bottomBounds, bottomFillColour, bottomBorderColour, 2);
 
     // Draw the waveform in the top section if available
-    if (thumbnail.getTotalLength() > 0.0)
-    {
-        double displayLength = 10.0; // Display only the first 10 seconds
-        g.setColour(juce::Colours::white);
-        thumbnail.drawChannels(g, topBounds, 0.0, std::min(displayLength, thumbnail.getTotalLength()), 1.0f);
-        int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
-        float start = (static_cast<float>(startPosition) / numSamples) * topBounds.getWidth();
-        float end = (static_cast<float>(endPosition) / numSamples) * topBounds.getWidth();
-
-   
-        g.setColour(juce::Colours::red);  
-        g.drawLine(topBounds.getX() + start, topBounds.getY(), topBounds.getX() + start, topBounds.getBottom());
-        g.drawLine(topBounds.getX() + end, topBounds.getY(), topBounds.getX() + end, topBounds.getBottom());     
+    if (viewToggle.getToggleStateValue() == true) {
+        // Adjust waveviewer bounds to leave space for viewToggle
+        audioProcessor.waveviewer.setVisible(true);
+        juce::Rectangle<int> adjustedWaveviewerBounds = topBounds.reduced(0, viewToggle.getHeight() + 10);
+        audioProcessor.waveviewer.setBounds(adjustedWaveviewerBounds);
     }
-    else
-    {
-        g.setColour(juce::Colours::white);
-        g.drawText(imgstate, topBounds, juce::Justification::centred);
+    else {
+        audioProcessor.waveviewer.setVisible(false);
+        if (thumbnail.getTotalLength() > 0.0)
+        {
+            g.setColour(juce::Colours::white);
+            thumbnail.drawChannels(g, topBounds, 0.0, thumbnail.getTotalLength(), 1.0f);
+
+            int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
+            float start = (static_cast<float>(startPosition) / numSamples) * topBounds.getWidth();
+            float end = (static_cast<float>(endPosition) / numSamples) * topBounds.getWidth();
+
+            g.setColour(juce::Colours::red);
+            g.drawLine(topBounds.getX() + start, topBounds.getY(), topBounds.getX() + start, topBounds.getBottom());
+            g.drawLine(topBounds.getX() + end, topBounds.getY(), topBounds.getX() + end, topBounds.getBottom());
+        }
+        else
+        {
+            g.setColour(juce::Colours::white);
+            g.drawText(imgstate, topBounds, juce::Justification::centred);
+        }
     }
 
+    // Set viewToggle button position
+    viewToggle.setBounds(topBounds.getX() + 145, topBounds.getBottom() - viewToggle.getHeight()+5, 100, 50);
 
-
-
-    //Audio effects
+    // Additional UI setup...
     int lowertop = bounds.getHeight() * 0.6;
-    int filterbuttonpos = lowertop+30;
+    int filterbuttonpos = lowertop + 30;
     int filterbuttonmargin = 10;
     int filterlblpos = filterbuttonpos + 10;
     int enabledposy = filterbuttonpos + 80;
@@ -618,15 +633,15 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     int filtercomboposy = filterbuttonpos + 240;
 
     Filterlbl.setBounds(50, filterlblpos, 100, 30);
-    filter1.setBounds(50, filterbuttonpos +50,50,30);
+    filter1.setBounds(50, filterbuttonpos + 50, 50, 30);
 
-    filter2.setBounds(100+ filterbuttonmargin, filterbuttonpos + 50, 50, 30);
-    filter3.setBounds(150+ filterbuttonmargin*2, filterbuttonpos + 50, 50, 30);
-    filter4.setBounds(200+ filterbuttonmargin*3, filterbuttonpos + 50, 50, 30);
+    filter2.setBounds(100 + filterbuttonmargin, filterbuttonpos + 50, 50, 30);
+    filter3.setBounds(150 + filterbuttonmargin * 2, filterbuttonpos + 50, 50, 30);
+    filter4.setBounds(200 + filterbuttonmargin * 3, filterbuttonpos + 50, 50, 30);
 
     is_enabledlabel.setBounds(80, enabledposy, 100, 50);
     curfiltertoggle.setBounds(50, enabledposy, 50, 50);
-    
+
     freqfilterlbl.setBounds(50, freq_q_lblpos, 80, 30);
     qfilterlbl.setBounds(200, freq_q_lblpos, 50, 30);
 
@@ -635,11 +650,8 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
 
     curfiltertype_combobox.setBounds(50, filtercomboposy, 250, 30);
     curfiltertype_combobox.onChange = [this]() {
-
         updatefilters();
         };
-     
-
 }
 
 
@@ -651,7 +663,7 @@ void ImagineAudioProcessorEditor::resized()
 
     // Calculate horizontal spacing between knobs (set to 0 for no space)
     int spacing = 0;
-
+    
     // Set yPosition to the top of the bottom region
     int yPosition = getHeight() * 1.5 / 3; // Adjust this if necessary
     int rightcorner = getWidth()-50;
@@ -659,7 +671,7 @@ void ImagineAudioProcessorEditor::resized()
 
     //=====================================================================
     //GainSlider
-
+    viewToggle.setBounds(50, 10, 100, 30);
     gainSlider.setBounds(rightcorner - 150, yPosition+150, 200,150);
     
     auto bounds = getLocalBounds();
@@ -965,4 +977,43 @@ void ImagineAudioProcessorEditor::loadThumbnailAsync(const juce::File& file)
             thumbnail.setSource(fileSource); // This might take some time
             juce::MessageManager::callAsync([this]() { repaint(); }); // Repaint once loaded
         });
+}
+
+void ImagineAudioProcessorEditor::drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds)
+{
+    // Access the audio buffer from the processor
+    auto* buffer = audioProcessor.getLiveBuffer();
+    if (buffer == nullptr || buffer->getNumSamples() == 0) return;
+
+    g.setColour(juce::Colours::green);
+    int numChannels = buffer->getNumChannels();
+    int numSamples = buffer->getNumSamples();
+    float verticalScale = bounds.getHeight() / (float)numChannels;
+
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        auto channelData = buffer->getReadPointer(channel);
+        juce::Path waveformPath;
+        waveformPath.startNewSubPath(bounds.getX(), bounds.getCentreY());
+
+        // Map buffer samples to screen coordinates
+        for (int i = 0; i < numSamples; ++i)
+        {
+            float x = juce::jmap(i, 0, numSamples - 1, bounds.getX(), bounds.getRight());
+            float y = juce::jmap(static_cast<float>(channelData[i]), -1.0f, 1.0f, static_cast<float>(bounds.getBottom()), static_cast<float>(bounds.getY()));
+            waveformPath.lineTo(x, y);
+        }
+
+        // Draw the waveform path for each channel
+        g.strokePath(waveformPath, juce::PathStrokeType(1.0f));
+    }
+}
+
+// Timer callback for continuous repaint
+void ImagineAudioProcessorEditor::timerCallback()
+{
+    if (viewToggle.getToggleState()) // Only update if live view is enabled
+    {
+        repaint();
+    }
 }

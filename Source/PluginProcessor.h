@@ -100,9 +100,19 @@ public:
     std::unique_ptr<juce::AudioBuffer<float>> selectedBlock;
     std::unique_ptr<juce::AudioBuffer<float>> firstBlock;
     std::unique_ptr<juce::AudioBuffer<float>> lastBlock;
+    std::unique_ptr<juce::AudioBuffer<float>> liveViewBuffer;
     void setGain(float gainValue) { currentGain = gainValue; }
     float currentGain = 1.0f;
     
+    //Reverb=================================
+    juce::AudioParameterFloat* reverbRoomSize;
+    juce::AudioParameterFloat* reverbDamping;
+    juce::AudioParameterFloat* reverbWet;
+    juce::AudioParameterFloat* reverbDry;
+    juce::AudioParameterFloat* reverbWidth;
+    juce::AudioParameterBool* reverbEnabled;
+    //Resample===============================
+
 
     void setFilter(int filterIndex, std::string type, int frequency, float qFactor);
 ;
@@ -130,21 +140,13 @@ public:
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
 
-
-    juce::AudioParameterFloat* reverbRoomSize;
-    juce::AudioParameterFloat* reverbDamping;
-    juce::AudioParameterFloat* reverbWet;
-    juce::AudioParameterFloat* reverbDry;
-    juce::AudioParameterFloat* reverbWidth;
-    juce::AudioParameterBool* reverbEnabled;
+    
 
 
-    void saveSoundAsWav(const juce::File& file);
-    void saveSoundAsImag(const juce::File& file);
     void saveSound(const juce::File& file);
     void loadFileSound(const juce::File& file);
-
-
+    juce::AudioBuffer<float>* getLiveBuffer() { return liveViewBuffer.get(); }  // For live buffer view
+    juce::AudioVisualiserComponent waveviewer;
 private:
 
     juce::AudioFormatManager mFormatManager;

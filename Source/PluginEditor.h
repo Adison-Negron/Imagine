@@ -29,7 +29,7 @@ class SliderWindow;
 
 
 
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener
+class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer
 {
 public:
 
@@ -99,6 +99,11 @@ public:
     void onFilterToggled(juce::Button* toggledButton);
 
     void updatefilters();
+    //------------------------------------------------------------//
+    //live view
+
+    juce::ToggleButton viewToggle;
+
     //-----------------------------------------------------------//
     juce::AudioThumbnailCache thumbnailCache;
     juce::AudioThumbnail thumbnail;
@@ -178,6 +183,8 @@ public:
     juce::TextButton loadButton; 
 
     void loadThumbnailAsync(const juce::File& file);
+    void drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds);
+    void timerCallback();
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.

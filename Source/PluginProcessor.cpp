@@ -25,7 +25,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 #endif
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
-    )
+    ),waveviewer(1)
 
 
 
@@ -34,6 +34,10 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 #endif
 {
     
+    waveviewer.setRepaintRate(30);
+    waveviewer.setBufferSize(256);
+
+
     mFormatManager.registerBasicFormats();
     for (int i = 0; i < mNumVoices; i++) {
 
@@ -178,21 +182,21 @@ bool ImagineAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) 
 void ImagineAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+    // Clear output channels if they exceed input channels
+    for (int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
+    // Render the sample block
     mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
+    // Apply gain
+    auto& gain = effectsChain.get<0>();
+    gain.setGainLinear(currentGain);
     juce::dsp::AudioBlock<float> block(buffer);
+    gain.process(juce::dsp::ProcessContextReplacing<float>(block));
 
-     auto& gain = effectsChain.get<0>();
-     gain.setGainLinear(currentGain); // Assuming currentGain is your gain parameter
-     gain.process(juce::dsp::ProcessContextReplacing<float>(block));
-    
-
+    // Apply reverb if enabled
     if (reverbEnabled->get())
     {
         auto& reverb = effectsChain.get<1>();
@@ -207,11 +211,12 @@ void ImagineAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
         reverb.process(juce::dsp::ProcessContextReplacing<float>(block));
     }
 
-    // Apply filters to each channel individually
+    // Apply filters
     if (filter1_enabled) filter1.process(juce::dsp::ProcessContextReplacing<float>(block));
     if (filter2_enabled) filter2.process(juce::dsp::ProcessContextReplacing<float>(block));
     if (filter3_enabled) filter3.process(juce::dsp::ProcessContextReplacing<float>(block));
     if (filter4_enabled) filter4.process(juce::dsp::ProcessContextReplacing<float>(block));
+    waveviewer.pushBuffer(buffer);
 }
 
 //==============================================================================
