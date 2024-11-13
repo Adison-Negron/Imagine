@@ -121,12 +121,17 @@ void ImagineAudioProcessor::changeProgramName (int index, const juce::String& ne
 //==============================================================================
 void ImagineAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
     mSampler.setCurrentPlaybackSampleRate(sampleRate);
 
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = getTotalNumOutputChannels();
 
-
+    filter1.prepare(spec);
+    filter2.prepare(spec);
+    filter3.prepare(spec);
+    filter4.prepare(spec);
 }
 
 void ImagineAudioProcessor::releaseResources()
@@ -161,31 +166,26 @@ bool ImagineAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) 
 }
 #endif
 
-void ImagineAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void ImagineAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear(i, 0, buffer.getNumSamples());
 
-    // Set gain value from the slider or parameter
-
- ;  // Assuming gainSlider is accessible here
     effectsChain.get<0>().setGainLinear(currentGain);
-    // Process sampler output
     mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
-    // Apply effects chain, which includes the gain adjustment
     juce::dsp::AudioBlock<float> block(buffer);
     effectsChain.process(juce::dsp::ProcessContextReplacing<float>(block));
+
+    // Apply filters to each channel individually
+    if (filter1_enabled) filter1.process(juce::dsp::ProcessContextReplacing<float>(block));
+    if (filter2_enabled) filter2.process(juce::dsp::ProcessContextReplacing<float>(block));
+    if (filter3_enabled) filter3.process(juce::dsp::ProcessContextReplacing<float>(block));
+    if (filter4_enabled) filter4.process(juce::dsp::ProcessContextReplacing<float>(block));
 }
 
 //==============================================================================
@@ -417,6 +417,46 @@ void ImagineAudioProcessor::onBlockChange(int start, int end)
         selectedRange.setRange(0, 128, true);
         mSampler.clearSounds();
         mSampler.addSound(new juce::SamplerSound("Selected Block", *reader, selectedRange, 60, 0.1, 0.1, 10));
+    }
+}
+void ImagineAudioProcessor::setFilter(int filterIndex, std::string type, int frequency, float qFactor)
+{
+    auto newCoefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(getSampleRate(), frequency, qFactor);
+
+   
+    if( type == "LowPass"){
+        newCoefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(getSampleRate(), frequency, qFactor);
+        }
+    else if (type == "HighPass") {
+        newCoefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass(getSampleRate(), frequency, qFactor);
+    }
+    else if (type == "BandPass") {
+        newCoefficients = juce::dsp::IIR::Coefficients<float>::makeBandPass(getSampleRate(), frequency, qFactor);
+        }
+    
+    else if (type == "Notch") {
+        newCoefficients = juce::dsp::IIR::Coefficients<float>::makeNotch(getSampleRate(), frequency, qFactor);
+    }
+
+    if (newCoefficients != nullptr)
+    {
+        switch (filterIndex)
+        {
+        case 1:
+            *filter1.state = *newCoefficients;
+            break;
+        case 2:
+            *filter2.state = *newCoefficients;
+            break;
+        case 3:
+            *filter3.state = *newCoefficients;
+            break;
+        case 4:
+            *filter4.state = *newCoefficients;
+            break;
+        default:
+            break;
+        }
     }
 }
 

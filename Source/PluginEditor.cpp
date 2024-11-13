@@ -12,28 +12,14 @@
 
 //==============================================================================
 ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(1),  // Initialize the thumbnail cache with a cache size of 5
+    : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(2),  // Initialize the thumbnail cache with a cache size of 5
     thumbnail(1024, formatManager, thumbnailCache)
 {   
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
 
     setSize (1280, 720);
     state = (Stopping);
     setResizable(false, false);
 
-    //addAndMakeVisible(&playButton);
-    //playButton.onClick = [this] { playButtonClicked(); };
-    //playButton.setColour(juce::TextButton::buttonColourId, juce::Colours::green);
-
-
-
-
-    //addAndMakeVisible(&stopButton);
-    //stopButton.onClick = [this] { stopButtonClicked(); };
-    //stopButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
-       
-    //Audio thumbnail init
 
 
     // Optionally, add more items to mainFlexBox as needed
@@ -83,10 +69,10 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
 
     // Gain label setup
   
-    gainSlider.setColour(juce::Slider::thumbColourId, juce::Colours::white);
+    gainSlider.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
     gainSlider.setColour(juce::Slider::backgroundColourId, charcoal);
-    gainSlider.setColour(juce::Slider::textBoxTextColourId, charcoal);
-    gainSlider.setColour(juce::Slider::textBoxBackgroundColourId, ivory);
+    gainSlider.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    gainSlider.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
     gainLabel.setText("Gain", juce::dontSendNotification);
     gainSlider.setSliderStyle(juce::Slider::Rotary);
 
@@ -99,6 +85,74 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     addAndMakeVisible(gainLabel);
 
 
+    //Filter section=====================================================
+
+    addAndMakeVisible(Filterlbl);
+    addAndMakeVisible(filter1);
+    addAndMakeVisible(filter2);
+    addAndMakeVisible(filter3);
+    addAndMakeVisible(filter4);
+    addAndMakeVisible(curfiltertype_combobox);
+    addAndMakeVisible(curfiltertoggle);
+    addAndMakeVisible(curfilterfreq);
+    addAndMakeVisible(cur_q_val);
+    addAndMakeVisible(is_enabledlabel);
+    addAndMakeVisible(freqfilterlbl);
+    addAndMakeVisible(qfilterlbl);
+
+    filter1.onClick = [this]() { onFilterToggled(&filter1); };
+    filter2.onClick = [this]() { onFilterToggled(&filter2); };
+    filter3.onClick = [this]() { onFilterToggled(&filter3); };
+    filter4.onClick = [this]() { onFilterToggled(&filter4); };
+
+    filter1.setToggleState(true,juce::dontSendNotification);
+
+
+
+    curfiltertype_combobox.setColour(juce::ComboBox::backgroundColourId, charcoal);
+    curfiltertype_combobox.addItem("LowPass", 1);
+    curfiltertype_combobox.addItem("HighPass", 2);
+    curfiltertype_combobox.addItem("BandPass", 3);
+    curfiltertype_combobox.addItem("Notch", 4);
+    curfiltertype_combobox.setText("LowPass");
+
+    curfilterfreq.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    curfilterfreq.setColour(juce::Slider::backgroundColourId, charcoal);
+    curfilterfreq.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    curfilterfreq.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    curfilterfreq.setTextValueSuffix("hz");
+    freqfilterlbl.setText("Frequency", juce::dontSendNotification);
+    curfilterfreq.setSliderStyle(juce::Slider::Rotary);
+    curfilterfreq.setRange(20, 20000, 10);
+    curfilterfreq.addListener(this);
+
+    cur_q_val.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    cur_q_val.setColour(juce::Slider::backgroundColourId, charcoal);
+    cur_q_val.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    cur_q_val.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    cur_q_val.setTextValueSuffix("");
+    qfilterlbl.setText("Q", juce::dontSendNotification);
+    cur_q_val.setSliderStyle(juce::Slider::Rotary);
+    cur_q_val.setRange(.5, 10, .5);
+    cur_q_val.addListener(this);
+
+    is_enabledlabel.setText("Enable filter",juce::dontSendNotification);
+    is_enabledlabel.setColour(juce::Label::backgroundColourId, charcoal);
+    is_enabledlabel.setColour(juce::Label::textColourId, juce::Colours::whitesmoke);
+
+
+    Filterlbl.setColour(juce::Slider::backgroundColourId, charcoal);
+    Filterlbl.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    Filterlbl.setText("Filter section", juce::dontSendNotification);
+    auto setFilterColours = [](juce::TextButton& filter, juce::Colour background, juce::Colour textBoxText, juce::Colour textBoxBackground) {
+        
+        filter.setColour(juce::Slider::backgroundColourId, background);
+        filter.setColour(juce::Slider::textBoxTextColourId, textBoxText);
+        filter.setColour(juce::Slider::textBoxBackgroundColourId, textBoxBackground);
+        };
+
+    curfiltertoggle.onClick = [this]() {
+        updatefilters(); };
     //--------------------------------------------------------------------------------------------//
 
 
@@ -144,12 +198,167 @@ void ImagineAudioProcessorEditor::addSlider(juce::Slider& slider, juce::Label& l
 }
 
 
+void ImagineAudioProcessorEditor::updatefilters() {
+
+    auto* freq = &tempfreq;
+    auto* q = &tempq;
+    //Filtertype
+    int curfilter_id = curfiltertype_combobox.getSelectedId();
+    //On which filter
+    int result = findtoggledfilter();
+    if (result == 0) {
+        curfiltertoggle.setToggleState(false, juce::dontSendNotification);
+
+    }
+    else
+    {
+        switch (result)
+        {
+        default:
+            break;
+
+        case 1:
+            if (curfiltertoggle.getToggleState() == true) {
+                istoggled_fil1 = true;
+                audioProcessor.filter1_enabled = true;
+                freq = &filter1freq;
+                q = &filter1q;
+
+            }
+            else {
+                istoggled_fil1 = false;
+                audioProcessor.filter1_enabled = false;
+                return;
+            }
+            break;
+
+        case 2:
+            if (curfiltertoggle.getToggleState() == true) {
+                istoggled_fil2 = true;
+                audioProcessor.filter2_enabled = true;
+                freq = &filter2freq;
+                q = &filter2q;
+            }
+
+            else {
+                istoggled_fil2 = false;
+                audioProcessor.filter2_enabled = false;
+                return;
+            }
+            break;
+
+        case 3:
+            if (curfiltertoggle.getToggleState() == true) {
+                istoggled_fil3 = true;
+                audioProcessor.filter3_enabled = true;
+                freq = &filter3freq;
+                q = &filter3q;
+            }
+            else {
+                istoggled_fil3 = false;
+                audioProcessor.filter3_enabled = false;
+                return;
+            }
+            break;
+
+        case 4:
+            if (curfiltertoggle.getToggleState() == true) {
+                istoggled_fil4 = true;
+                audioProcessor.filter4_enabled = true;
+                freq = &filter4freq;
+                q = &filter4q;
+            }
+            else {
+                istoggled_fil4 = false;
+                audioProcessor.filter4_enabled = false;
+                return;
+            }
+            break;
+
+        }
+
+        //Setup filter type
+        switch (curfilter_id)
+        {
+        default:
+            break;
+        case 1:
+            audioProcessor.setFilter(result, "LowPass", *freq, *q);
+            break;
+        case 2:
+            audioProcessor.setFilter(result, "HighPass", *freq, *q);
+            break;
+        case 3:
+            audioProcessor.setFilter(result, "BandPass", *freq, *q);
+            break;
+        case 4:
+            audioProcessor.setFilter(result, "Notch", *freq, *q);
+            break;
+        }
+
+
+    }
+
+    return;
+}
 
 //Parameters=================================================================
 
 void ImagineAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
+    if (slider == &gainSlider) {
+        audioProcessor.setGain(gainSlider.getValue());
+    }
 
+    if (slider == &curfilterfreq) {
+       int result = findfilternum();
+       switch (result)
+       {
+       default:
+           break;
+
+       case 1:
+           filter1freq = curfilterfreq.getValue();
+           break;
+
+       case 2:
+           filter2freq = curfilterfreq.getValue();
+           break;
+       case 3:
+           filter3freq = curfilterfreq.getValue();
+           break;
+       case 4:
+           filter4freq = curfilterfreq.getValue();
+           break;
+
+       }
+       updatefilters();
+    }
+    
+    if (slider == &cur_q_val) {
+        int result = findfilternum();
+        switch (result)
+        {
+        default:
+            break;
+
+        case 1:
+            filter1q = cur_q_val.getValue();
+            break;
+        case 2:
+            filter2q = cur_q_val.getValue();
+            break;
+        case 3:
+            filter3q = cur_q_val.getValue();
+            break;
+        case 4:
+            filter1q = cur_q_val.getValue();
+            break;
+
+        updatefilters();
+        }
+
+    }
 }
 
 void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
@@ -252,24 +461,48 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
         g.setColour(juce::Colours::white);
         g.drawText(imgstate, topBounds, juce::Justification::centred);
     }
+
+
+
+
+    //Audio effects
+    int lowertop = bounds.getHeight() * 0.6;
+    int filterbuttonpos = lowertop+30;
+    int filterbuttonmargin = 10;
+    int filterlblpos = filterbuttonpos + 10;
+    int enabledposy = filterbuttonpos + 80;
+    int filterposy = filterbuttonpos + 140;
+    int freq_q_lblpos = filterbuttonpos + 140;
+    int filtercomboposy = filterbuttonpos + 240;
+
+    Filterlbl.setBounds(50, filterlblpos, 100, 30);
+    filter1.setBounds(50, filterbuttonpos +50,50,30);
+
+    filter2.setBounds(100+ filterbuttonmargin, filterbuttonpos + 50, 50, 30);
+    filter3.setBounds(150+ filterbuttonmargin*2, filterbuttonpos + 50, 50, 30);
+    filter4.setBounds(200+ filterbuttonmargin*3, filterbuttonpos + 50, 50, 30);
+
+    is_enabledlabel.setBounds(80, enabledposy, 100, 50);
+    curfiltertoggle.setBounds(50, enabledposy, 50, 50);
+    
+    freqfilterlbl.setBounds(50, freq_q_lblpos, 80, 30);
+    qfilterlbl.setBounds(200, freq_q_lblpos, 50, 30);
+
+    curfilterfreq.setBounds(50, filterposy, 150, 100);
+    cur_q_val.setBounds(200, filterposy, 150, 100);
+
+    curfiltertype_combobox.setBounds(50, filtercomboposy, 250, 30);
+    curfiltertype_combobox.onChange = [this]() {
+
+        updatefilters();
+        };
+     
+
 }
 
-
-void  buttonsliderorganizer(int numberofsliders, int numberofbuttons,juce::TextButton buttonarray[], juce::Slider sliderarray[]) {
-
-
-
-
-}
 
 void ImagineAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
-    //playButton.setBounds(10, 10, 100, 30);
-    //stopButton.setBounds(120, 10, 100, 30);
-
-    // Define larger width and height for each knob
     constexpr int knobWidth = 120;
     constexpr int knobHeight = 120;
     const int numKnobs = 4;
@@ -280,23 +513,7 @@ void ImagineAudioProcessorEditor::resized()
     // Set yPosition to the top of the bottom region
     int yPosition = getHeight() * 1.5 / 3; // Adjust this if necessary
     int rightcorner = getWidth()-50;
-    //for (int i = 0; i < numKnobs; ++i)
-    //{
-    //    juce::Slider* knob = nullptr;
-    //    switch (i) {
-    //    case 0: knob = &paramslider1; break;
-    //    case 1: knob = &paramslider2; break;
-    //    case 2: knob = &paramslider3; break;
-    //    case 3: knob = &paramslider4; break;
-    //    }
-    //    if (knob != nullptr)
-    //    {
-    //        // Adjust the size and position of each knob with no spacing
-    //        knob->setBounds(spacing + i * (knobWidth + spacing), yPosition, knobWidth, knobHeight);
-    //        knob->setSliderStyle(juce::Slider::Rotary);
-    //        knob->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
-    //    }
-    //}
+
 
     //=====================================================================
     //GainSlider
@@ -390,33 +607,6 @@ juce::File ImagineAudioProcessorEditor::createFolderIfNotExists(const juce::File
     return folder;
 }
 
-//void ImagineAudioProcessorEditor::playButtonClicked()
-//{
-//    changeState(Starting);
-//}
-//
-//void ImagineAudioProcessorEditor::stopButtonClicked()
-//{
-//    changeState(Stopping);
-//}
-
-//void ImagineAudioProcessorEditor::playWavFile()
-//{
-//    juce::File wavFile = audioProcessor.outputpath;
-//
-//    if (wavFile.existsAsFile())
-//    {
-//        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(wavFile));
-//
-//        if (reader != nullptr)
-//        {
-//            std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader.release(), true));
-//            transportSource.setSource(newSource.get(), 0, nullptr, 44800);
-//            readerSource.reset(newSource.release());
-//            transportSource.start();
-//        }
-//    }
-//}
 
 void ImagineAudioProcessorEditor::changeState(TransportState newState)
 {
@@ -470,4 +660,142 @@ void ImagineAudioProcessorEditor::generateSound()
         audioProcessor.selectedBlock->clear();
     }
     
+}
+
+int ImagineAudioProcessorEditor::findtoggledfilter() {
+
+    if (filter1.getToggleState() == true) {
+
+        istoggled_fil1 = true;
+        return 1;
+    }
+    if (filter2.getToggleState() == true) {
+
+        istoggled_fil2 = true;
+        return 2;
+    }
+    if (filter3.getToggleState() == true) {
+
+        istoggled_fil3 = true;
+        return 3;
+    }
+    if (filter4.getToggleState() == true) {
+
+        istoggled_fil4 = true;
+        return 4;
+    }
+    else {
+        return 0;
+    }
+}
+
+
+void ImagineAudioProcessorEditor::untoggleOtherFilters(int selectedFilter)
+{
+    switch (selectedFilter)
+    {
+    case 1:
+        filter2.setToggleState(false, juce::dontSendNotification);
+        filter3.setToggleState(false, juce::dontSendNotification);
+        filter4.setToggleState(false, juce::dontSendNotification);
+        break;
+    case 2:
+        filter1.setToggleState(false, juce::dontSendNotification);
+        filter3.setToggleState(false, juce::dontSendNotification);
+        filter4.setToggleState(false, juce::dontSendNotification);
+        break;
+    case 3:
+        filter1.setToggleState(false, juce::dontSendNotification);
+        filter2.setToggleState(false, juce::dontSendNotification);
+        filter4.setToggleState(false, juce::dontSendNotification);
+        break;
+    case 4:
+        filter1.setToggleState(false, juce::dontSendNotification);
+        filter2.setToggleState(false, juce::dontSendNotification);
+        filter3.setToggleState(false, juce::dontSendNotification);
+        break;
+    default:
+        // If no filter is selected, do nothing
+        break;
+    }
+}
+
+int ImagineAudioProcessorEditor::findfilternum()
+{
+    if (filter1.getToggleState()) {
+        
+        return 1;
+
+    }
+    if (filter2.getToggleState()) {
+
+        return 2;
+
+    }
+
+    if (filter3.getToggleState()) {
+
+        return 3;
+
+    }
+
+    if (filter4.getToggleState()) {
+
+        return 4;
+
+    }
+
+
+    return 0; // Return 0 if none are toggled
+}
+
+
+
+void ImagineAudioProcessorEditor::onFilterToggled(juce::Button* toggledButton)
+{
+
+    if (toggledButton == &filter1)
+    {
+        untoggleOtherFilters(1);
+        if (istoggled_fil1) {
+            curfiltertoggle.setToggleState(true, juce::dontSendNotification);
+        }
+        else {
+            curfiltertoggle.setToggleState(false, juce::dontSendNotification);
+        }
+        
+    }
+    else if (toggledButton == &filter2)
+    {
+        untoggleOtherFilters(2);
+        if (istoggled_fil2) {
+            curfiltertoggle.setToggleState(true, juce::dontSendNotification);
+        }
+        else {
+            curfiltertoggle.setToggleState(false, juce::dontSendNotification);
+        }
+
+    }
+    else if (toggledButton == &filter3)
+    {
+        untoggleOtherFilters(3);
+        if (istoggled_fil3) {
+            curfiltertoggle.setToggleState(true, juce::dontSendNotification);
+        }
+        else {
+            curfiltertoggle.setToggleState(false, juce::dontSendNotification);
+        }
+
+    }
+    else if (toggledButton == &filter4)
+    {
+        untoggleOtherFilters(4);
+        if (istoggled_fil4) {
+            curfiltertoggle.setToggleState(true, juce::dontSendNotification);
+        }
+        else {
+            curfiltertoggle.setToggleState(false, juce::dontSendNotification);
+        }
+
+    }
 }

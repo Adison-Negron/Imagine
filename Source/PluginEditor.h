@@ -66,13 +66,39 @@ public:
     juce::Slider paramslider1, paramslider2, paramslider3, paramslider4;
 
 
-    //Parameters
+    //Parameters Effects and stuff
     //=================================================================================
     juce::Slider gainSlider;
     juce::Label gainLabel;
     juce::LookAndFeel_V4 gainLookAndFeel;
 
 
+    //Filters
+    juce::Label Filterlbl{ "Filter" };
+    juce::ToggleButton filter1{ "Filter 1" }, filter2{ "Filter 2" }, filter3{ "Filter 3" }, filter4{ "Filter 4" };
+    bool istoggled_fil1{false}, istoggled_fil2{ false }, istoggled_fil3{ false }, istoggled_fil4{ false };
+    int filter1freq{20}, filter2freq{ 20 }, filter3freq{ 20 }, filter4freq{ 20 }, tempfreq{ 20 };
+    float filter1q{ 0.5 }, filter2q{ 0.5 }, filter3q{ 0.5 }, filter4q{ 0.5 }, tempq{ 0.5 };
+
+
+
+    juce::ComboBox curfiltertype_combobox;
+    juce::Label is_enabledlabel;
+    juce::ToggleButton curfiltertoggle;
+    juce::Slider curfilterfreq;
+    juce::Slider cur_q_val;
+    juce::Label freqfilterlbl;
+    juce::Label qfilterlbl;
+
+
+
+
+    int findtoggledfilter();
+    void untoggleOtherFilters(int selectedFilter);
+    int findfilternum();
+    void onFilterToggled(juce::Button* toggledButton);
+
+    void updatefilters();
     //-----------------------------------------------------------//
     juce::AudioThumbnailCache thumbnailCache;
     juce::AudioThumbnail thumbnail;
@@ -116,24 +142,15 @@ public:
     juce::AudioSourcePlayer audioSourcePlayer;
     juce::AudioDeviceManager deviceManager;
 
-    //juce::TextButton playButton{ "Play" };
-    //juce::TextButton stopButton{ "Stop" };
 
     juce::TextButton block{ "Play Block" };
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDoubleClick(const juce::MouseEvent& event);
     juce::Rectangle<int> bounds;
     juce::Rectangle<int> topBounds;
-
-
     juce::GroupComponent generation_sliders;
-
-
-    //void playButtonClicked();
-    //void stopButtonClicked();
     void changeState(TransportState newState);
     TransportState state;
-    //void playWavFile();
     void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default);
 
     juce::File getImageFile()
@@ -148,6 +165,12 @@ public:
     void generateSound();
 
     int startPosition, endPosition;
+
+
+
+
+
+
 
 private:
     // This reference is provided as a quick way for your editor to
