@@ -29,11 +29,111 @@ SliderWindow::SliderWindow(ImagineAudioProcessorEditor* editor) : editor(editor)
     addAndMakeVisible(generateButton);
     generateButton.onClick = [editor] { editor->generateSound(); };
 
+
+
+    addAndMakeVisible(saveButton);
+    saveButton.setButtonText("Save");
+    saveButton.onClick = [this] {
+        DBG("Save button clicked");
+        auto* chooser = new juce::FileChooser("Save Parameters", {}, "*.imag");
+        chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, chooser](const juce::FileChooser& fc)
+            {
+                DBG("Save FileChooser lambda entered");
+        auto result = fc.getResult();
+        if (result != juce::File{})
+        {
+            DBG("Saving to file: " + result.getFullPathName());
+            saveParameters(result);
+        }
+        else
+        {
+            DBG("No file selected for saving");
+        }
+        delete chooser; 
+            });
+    };
+
+    addAndMakeVisible(loadButton);
+    loadButton.setButtonText("Load");
+    loadButton.onClick = [this] {
+        DBG("Load button clicked");
+        auto* chooser = new juce::FileChooser("Load Parameters", {}, "*.imag");
+        chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, chooser](const juce::FileChooser& fc)
+            {
+                DBG("Load FileChooser lambda entered");
+        auto result = fc.getResult();
+        if (result != juce::File{})
+        {
+            DBG("Loading from file: " + result.getFullPathName());
+            loadParameters(result);
+        }
+        else
+        {
+            DBG("No file selected for loading");
+        }
+        delete chooser; 
+            });
+    };
+
 }
 
 SliderWindow::~SliderWindow()
 {
 }
+
+void SliderWindow::saveParameters(const juce::File& file)
+{
+    juce::XmlElement parameters("Parameters");
+    parameters.setAttribute("Kernel", kernel.getValue());
+    parameters.setAttribute("Step", step.getValue());
+    parameters.setAttribute("SoundLevel", sound_level.getValue());
+    parameters.setAttribute("SoundDuration", sound_duration.getValue());
+    parameters.setAttribute("ModulationIntensity", modulation_intensity.getValue());
+    parameters.setAttribute("ModulationEnvelopeIntensity", modulation_envelope_intensity.getValue());
+    parameters.setAttribute("ModulationDuration", modulation_duration.getValue());
+    parameters.setAttribute("LfoScalarFreq", lfo_scalar_freq.getValue());
+    parameters.setAttribute("LfoScalarAmplitude", lfo_scalar_amplitude.getValue());
+    parameters.setAttribute("LfoIntensity", lfo_intensity.getValue());
+    parameters.setAttribute("OvertoneNumScalar", overtone_num_scalar.getValue());
+    parameters.setAttribute("LfoAmountScalar", lfo_amount_scalar.getValue());
+
+    if (!parameters.writeToFile(file, {}))
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            "Save Error",
+            "Could not save parameters to file.");
+    }
+}
+
+void SliderWindow::loadParameters(const juce::File& file)
+{
+    juce::XmlDocument doc(file);
+    std::unique_ptr<juce::XmlElement> parameters(doc.getDocumentElement());
+
+    if (parameters == nullptr || !parameters->hasTagName("Parameters"))
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            "Load Error",
+            "Could not load parameters from file.");
+        return;
+    }
+
+    kernel.setValue(parameters->getDoubleAttribute("Kernel", kernel.getValue()));
+    step.setValue(parameters->getDoubleAttribute("Step", step.getValue()));
+    sound_level.setValue(parameters->getDoubleAttribute("SoundLevel", sound_level.getValue()));
+    sound_duration.setValue(parameters->getDoubleAttribute("SoundDuration", sound_duration.getValue()));
+    modulation_intensity.setValue(parameters->getDoubleAttribute("ModulationIntensity", modulation_intensity.getValue()));
+    modulation_envelope_intensity.setValue(parameters->getDoubleAttribute("ModulationEnvelopeIntensity", modulation_envelope_intensity.getValue()));
+    modulation_duration.setValue(parameters->getDoubleAttribute("ModulationDuration", modulation_duration.getValue()));
+    lfo_scalar_freq.setValue(parameters->getDoubleAttribute("LfoScalarFreq", lfo_scalar_freq.getValue()));
+    lfo_scalar_amplitude.setValue(parameters->getDoubleAttribute("LfoScalarAmplitude", lfo_scalar_amplitude.getValue()));
+    lfo_intensity.setValue(parameters->getDoubleAttribute("LfoIntensity", lfo_intensity.getValue()));
+    overtone_num_scalar.setValue(parameters->getDoubleAttribute("OvertoneNumScalar", overtone_num_scalar.getValue()));
+    lfo_amount_scalar.setValue(parameters->getDoubleAttribute("LfoAmountScalar", lfo_amount_scalar.getValue()));
+}
+
 
 void SliderWindow::paint(juce::Graphics& g)
 {
@@ -45,9 +145,9 @@ void SliderWindow::paint(juce::Graphics& g)
 void SliderWindow::resized()
 {
 
-    soundGenerationGroup.setBoundsRelative(0.1f, 0.1f, 0.8f, 0.25f);
-    modulationGroup.setBoundsRelative(0.1f, 0.38f, 0.8f, 0.25f);
-    baseToneGroup.setBoundsRelative(0.1f, 0.66f, 0.8f, 0.25f);
+    soundGenerationGroup.setBoundsRelative(0.1f, 0.05f, 0.8f, 0.25f);
+    modulationGroup.setBoundsRelative(0.1f, 0.33f, 0.8f, 0.25f);
+    baseToneGroup.setBoundsRelative(0.1f, 0.61f, 0.8f, 0.25f);
 
 
     setPositionWithinGroup(soundGenerationGroup, kernel, kernel_label, 0.0f, 0.02f, 0.25f, 0.30f);
@@ -68,7 +168,10 @@ void SliderWindow::resized()
     setPositionWithinGroup(baseToneGroup, lfo_amount_scalar, lfo_amount_label, 0.3f, 0.52f, 0.25f, 0.30f);
 
 
-    generateButton.setBoundsRelative(0.1f, 0.93f, 0.8f, 0.05f);
+    generateButton.setBoundsRelative(0.1f, 0.87f, 0.8f, 0.04f);
+
+    saveButton.setBoundsRelative(0.1f, 0.93f, 0.35f, 0.03f);
+    loadButton.setBoundsRelative(0.55f, 0.93f, 0.35f, 0.03f);
 
 }
 
@@ -84,6 +187,7 @@ void SliderWindow::addSlider(juce::Slider& slider, juce::Label& label, const juc
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     slider.setColour(juce::Slider::ColourIds::rotarySliderFillColourId, juce::Colours::whitesmoke);
+    slider.setTooltip("Testing this wao pog");
 
     label.setText(name, juce::dontSendNotification);
     label.attachToComponent(&slider, false); 

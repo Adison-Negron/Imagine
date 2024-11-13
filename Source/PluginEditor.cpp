@@ -120,6 +120,94 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     startPosition = 0;
     endPosition = 480000;
 
+
+
+    reverbRoomSize.setSliderStyle(juce::Slider::Rotary);
+    reverbRoomSize.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    reverbRoomSize.setColour(juce::Slider::backgroundColourId, charcoal);
+    reverbRoomSize.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    reverbRoomSize.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    reverbRoomSize.setRange(0.0, 1.0, 0.01);
+    reverbRoomSize.setValue(audioProcessor.reverbRoomSize->get());
+    reverbRoomSize.onValueChange = [this] { audioProcessor.reverbRoomSize->setValueNotifyingHost((float)reverbRoomSize.getValue()); };
+    reverbRoomSize.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    reverbRoomSizeLabel.setText("Room Size", juce::dontSendNotification);
+    reverbRoomSizeLabel.setJustificationType(juce::Justification::centred);
+    reverbRoomSizeLabel.attachToComponent(&reverbRoomSize, false);
+    addAndMakeVisible(reverbRoomSize);
+
+    reverbDamping.setSliderStyle(juce::Slider::Rotary);
+    reverbDamping.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    reverbDamping.setColour(juce::Slider::backgroundColourId, charcoal);
+    reverbDamping.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    reverbDamping.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    reverbDamping.setRange(0.0, 1.0, 0.01);
+    reverbDamping.setValue(audioProcessor.reverbDamping->get());
+    reverbDamping.onValueChange = [this] { audioProcessor.reverbDamping->setValueNotifyingHost((float)reverbDamping.getValue()); };
+    reverbDamping.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    reverbDampingLabel.setText("Damping", juce::dontSendNotification);
+    reverbDampingLabel.setJustificationType(juce::Justification::centred);
+    reverbDampingLabel.attachToComponent(&reverbDamping, false);
+    addAndMakeVisible(reverbDamping);
+
+    reverbWet.setSliderStyle(juce::Slider::Rotary);
+    reverbWet.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    reverbWet.setColour(juce::Slider::backgroundColourId, charcoal);
+    reverbWet.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    reverbWet.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    reverbWet.setRange(0.0, 1.0, 0.01);
+    reverbWet.setValue(audioProcessor.reverbWet->get());
+    reverbWet.onValueChange = [this] { audioProcessor.reverbWet->setValueNotifyingHost((float)reverbWet.getValue()); };
+    reverbWet.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    reverbWetLabel.setText("Wet Level", juce::dontSendNotification);
+    reverbWetLabel.setJustificationType(juce::Justification::centred);
+    reverbWetLabel.attachToComponent(&reverbWet, false);
+    addAndMakeVisible(reverbWet);
+
+    reverbDry.setSliderStyle(juce::Slider::Rotary);
+    reverbDry.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    reverbDry.setColour(juce::Slider::backgroundColourId, charcoal);
+    reverbDry.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    reverbDry.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    reverbDry.setRange(0.0, 1.0, 0.01);
+    reverbDry.setValue(audioProcessor.reverbDry->get());
+    reverbDry.onValueChange = [this] { audioProcessor.reverbDry->setValueNotifyingHost((float)reverbDry.getValue()); };
+    reverbDry.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    reverbDryLabel.setText("Dry Level", juce::dontSendNotification);
+    reverbDryLabel.setJustificationType(juce::Justification::centred);
+    reverbDryLabel.attachToComponent(&reverbDry, false);
+    addAndMakeVisible(reverbDry);
+
+    reverbWidth.setSliderStyle(juce::Slider::Rotary);
+    reverbWidth.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    reverbWidth.setColour(juce::Slider::backgroundColourId, charcoal);
+    reverbWidth.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    reverbWidth.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    reverbWidth.setRange(0.0, 1.0, 0.01);
+    reverbWidth.setValue(audioProcessor.reverbWidth->get());
+    reverbWidth.onValueChange = [this] { audioProcessor.reverbWidth->setValueNotifyingHost((float)reverbWidth.getValue()); };
+    reverbWidth.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    reverbWidthLabel.setText("Width", juce::dontSendNotification);
+    reverbWidthLabel.setJustificationType(juce::Justification::centred);
+    reverbWidthLabel.attachToComponent(&reverbWidth, false);
+    addAndMakeVisible(reverbWidth);
+
+    reverbEnabled.onClick = [this] { audioProcessor.reverbEnabled->setValueNotifyingHost(reverbEnabled.getToggleState()); };
+    reverbEnabled.setButtonText("Enable");
+    addAndMakeVisible(reverbEnabled);
+
+
+    saveButton.setButtonText("Save");
+    saveButton.addListener(this);
+    addAndMakeVisible(&saveButton);
+
+    loadButton.setButtonText("Load");
+    loadButton.addListener(this);
+    addAndMakeVisible(&loadButton);
+
+    reverb.setText("Reverb");
+    addAndMakeVisible(reverb);
+
 }
 
 ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
@@ -200,8 +288,57 @@ void ImagineAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& event
     }
 }
 
-
-
+void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
+{
+    if (button == &saveButton)
+    {
+        auto* chooser = new juce::FileChooser("Save Sound", juce::File(), "*.imag");
+        chooser->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, chooser](const juce::FileChooser& fc)
+            {
+                DBG("Save FileChooser lambda entered");
+        auto result = fc.getResult();
+        if (result != juce::File{})
+        {
+            auto extension = result.getFileExtension().toLowerCase();
+            if (extension == ".imag")
+            {
+                DBG("Saving to file: " + result.getFullPathName());
+                audioProcessor.saveSound(result);
+            }
+        }
+        else
+        {
+            DBG("No file selected for saving");
+        }
+        delete chooser;
+            });
+    }
+    else if (button == &loadButton)
+    {
+        auto* chooser = new juce::FileChooser("Load Sound", juce::File(), "*.imag");
+        chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, chooser](const juce::FileChooser& fc)
+            {
+                DBG("Load FileChooser lambda entered");
+        auto result = fc.getResult();
+        if (result != juce::File{})
+        {
+            auto extension = result.getFileExtension().toLowerCase();
+            if (extension == ".imag")
+            {
+                DBG("Loading from file: " + result.getFullPathName());
+                audioProcessor.loadFileSound(result);
+            }
+        }
+        else
+        {
+            DBG("No file selected for loading");
+        }
+        delete chooser;
+            });
+    }
+}
 
 
 
@@ -292,7 +429,7 @@ void ImagineAudioProcessorEditor::resized()
     //    if (knob != nullptr)
     //    {
     //        // Adjust the size and position of each knob with no spacing
-    //        knob->setBounds(spacing + i * (knobWidth + spacing), yPosition, knobWidth, knobHeight);
+    //        knob->setBounds(spacing + i * (knobWidth + spacing), yPosition, knobWidth, knobHeight); 
     //        knob->setSliderStyle(juce::Slider::Rotary);
     //        knob->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
     //    }
@@ -303,6 +440,28 @@ void ImagineAudioProcessorEditor::resized()
 
     gainSlider.setBounds(rightcorner - 150, yPosition+150, 200,150);
     
+    auto bounds = getLocalBounds();
+    auto topBounds = bounds.removeFromTop(bounds.getHeight() * 0.4);
+    auto bottomBounds = bounds;
+
+    int rsliderWidth = 130;
+    int rsliderHeight = 100;
+    int rgroupX = bottomBounds.getCentreX() - 150;
+    int rgroupY = bottomBounds.getY() + 5;
+    int rsliderY = rgroupY + 30;
+    int rmarginX = 80;
+    reverb.setBounds(rgroupX - 5, rgroupY, 280, 420);
+    reverbEnabled.setBounds(rgroupX + 25, rgroupY, 80, 80);
+    reverbRoomSize.setBounds(rgroupX, rsliderY + 70, rsliderWidth, rsliderHeight);
+    reverbDamping.setBounds((rgroupX + rmarginX), rsliderY + 70, rsliderWidth, rsliderHeight);
+    reverbWet.setBounds((rgroupX + (rmarginX * 2)), rsliderY + 70, rsliderWidth, rsliderHeight);
+    reverbDry.setBounds(rgroupX, rsliderY + 250, rsliderWidth, rsliderHeight);
+    reverbWidth.setBounds(rgroupX + (rmarginX * 2), rsliderY + 250, rsliderWidth, rsliderHeight);
+
+
+    int buttonHeight = 30;
+    saveButton.setBounds(0, bottomBounds.getY()-35, 60, buttonHeight);
+    loadButton.setBounds(70, bottomBounds.getY()-35, 60, buttonHeight);
 
 }
 

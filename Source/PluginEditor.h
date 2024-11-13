@@ -29,7 +29,7 @@ class SliderWindow;
 
 
 
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener
+class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener
 {
 public:
 
@@ -149,12 +149,23 @@ public:
 
     int startPosition, endPosition;
 
+
+    juce::Slider reverbRoomSize, reverbDamping, reverbWet, reverbDry, reverbWidth;
+    juce::Label reverbRoomSizeLabel, reverbDampingLabel, reverbWetLabel, reverbDryLabel, reverbWidthLabel;
+    juce::ToggleButton reverbEnabled;
+    juce::GroupComponent reverb;
+
+
+
+    juce::TextButton saveButton;
+    juce::TextButton loadButton; 
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     ImagineAudioProcessor& audioProcessor;
     juce::File createFolderIfNotExists(const juce::File& parentFolder, const std::string& folderName);
     void sliderValueChanged(juce::Slider* slider) override;
+    void buttonClicked(juce::Button* button) override;
     juce::File imageFile;
     SliderWindow* windowComponent;
     std::string imagePath;

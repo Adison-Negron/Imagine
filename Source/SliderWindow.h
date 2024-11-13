@@ -31,6 +31,14 @@ public:
 	juce::Slider& getLfoAmountScalarSlider() { return lfo_amount_scalar; }
 	void setPositionWithinGroup(juce::Component& group, juce::Slider& slider, juce::Label& label, float relX, float relY, float relWidth, float relHeight);
 
+
+	void saveParameters(const juce::File& file);
+	void loadParameters(const juce::File& file);
+
+	juce::TextButton saveButton{ "Save" };
+	juce::TextButton loadButton{ "Load" };
+	std::unique_ptr<juce::FileChooser> fileChooser;
+
 private:
 
 	juce::Slider kernel, step, sound_level, sound_duration, modulation_duration, modulation_intensity,
@@ -40,6 +48,7 @@ private:
 
 	ImagineAudioProcessorEditor* editor;
 	juce::TextButton generateButton{ "Generate Sound" };
+	juce::TooltipWindow tooltipWindow{ this, 500 };
 
 	juce::GroupComponent soundGenerationGroup;
 	juce::GroupComponent modulationGroup;

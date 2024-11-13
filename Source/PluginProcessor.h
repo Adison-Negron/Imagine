@@ -79,7 +79,7 @@ public:
     std::unique_ptr<juce::AudioBuffer<float>> selectedBlock;
     std::unique_ptr<juce::AudioBuffer<float>> firstBlock;
     std::unique_ptr<juce::AudioBuffer<float>> lastBlock;
-    juce::dsp::ProcessorChain<juce::dsp::Gain<float>> effectsChain;
+    juce::dsp::ProcessorChain<juce::dsp::Gain<float>, juce::dsp::Reverb> effectsChain;
     void setGain(float gainValue) { currentGain = gainValue; }
     float currentGain = 1.0f;
     
@@ -110,6 +110,19 @@ public:
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
 
+
+    juce::AudioParameterFloat* reverbRoomSize;
+    juce::AudioParameterFloat* reverbDamping;
+    juce::AudioParameterFloat* reverbWet;
+    juce::AudioParameterFloat* reverbDry;
+    juce::AudioParameterFloat* reverbWidth;
+    juce::AudioParameterBool* reverbEnabled;
+
+
+    void saveSoundAsWav(const juce::File& file);
+    void saveSoundAsImag(const juce::File& file);
+    void saveSound(const juce::File& file);
+    void loadFileSound(const juce::File& file);
 
 
 private:

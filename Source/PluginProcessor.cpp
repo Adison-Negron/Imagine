@@ -48,6 +48,15 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     root = currentPath;
 
     pyEmbedder = std::make_unique<Pyembedder>();
+
+
+
+    addParameter(reverbRoomSize = new juce::AudioParameterFloat("reverbRoomSize", "Reverb Room Size", 0.0f, 1.0f, 0.5f));
+    addParameter(reverbDamping = new juce::AudioParameterFloat("reverbDamping", "Reverb Damping", 0.0f, 1.0f, 0.5f));
+    addParameter(reverbWet = new juce::AudioParameterFloat("reverbWet", "Reverb Dry", 0.0f, 1.0, 0.33f));
+    addParameter(reverbDry = new juce::AudioParameterFloat("reverbDry", "Reverb Dry", 0.0f, 1.0f, 0.4f));
+    addParameter(reverbWidth = new juce::AudioParameterFloat("reverbWidth", "Reverb Width", 0.0f, 1.0f, 1.0f));
+    addParameter(reverbEnabled = new juce::AudioParameterBool("reverbEnabled", "Reverb Enabled", false));
 }
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
@@ -176,16 +185,32 @@ void ImagineAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // Set gain value from the slider or parameter
 
- ;  // Assuming gainSlider is accessible here
-    effectsChain.get<0>().setGainLinear(currentGain);
-    // Process sampler output
+
+
     mSampler.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
-    // Apply effects chain, which includes the gain adjustment
+    // Apply effects chain
     juce::dsp::AudioBlock<float> block(buffer);
-    effectsChain.process(juce::dsp::ProcessContextReplacing<float>(block));
+
+     auto& gain = effectsChain.get<0>();
+     gain.setGainLinear(currentGain); // Assuming currentGain is your gain parameter
+     gain.process(juce::dsp::ProcessContextReplacing<float>(block));
+    
+
+    if (reverbEnabled->get())
+    {
+        auto& reverb = effectsChain.get<1>();
+        reverb.setParameters({
+            reverbRoomSize->get(),
+            reverbDamping->get(),
+            reverbWet->get(),
+            reverbDry->get(),
+            reverbWidth->get(),
+            0.0f
+            });
+        reverb.process(juce::dsp::ProcessContextReplacing<float>(block));
+    }
 }
 
 //==============================================================================
@@ -417,6 +442,94 @@ void ImagineAudioProcessor::onBlockChange(int start, int end)
         selectedRange.setRange(0, 128, true);
         mSampler.clearSounds();
         mSampler.addSound(new juce::SamplerSound("Selected Block", *reader, selectedRange, 60, 0.1, 0.1, 10));
+    }
+}
+
+
+void ImagineAudioProcessor::saveSound(const juce::File& file)
+{
+    if (file.hasFileExtension("imag"))
+    {
+        // Custom .imag format
+        juce::FileOutputStream outputStream(file);
+
+        if (outputStream.openedOk())
+        {
+            int sampleRate = getSampleRate(); 
+            int numChannels = mainbuffer->getNumChannels(); 
+
+            outputStream.writeInt(sampleRate);
+            outputStream.writeInt(numChannels);
+
+            // Write the raw audio data
+            for (int channel = 0; channel < numChannels; ++channel)
+            {
+                for (int sample = 0; sample < mainbuffer->getNumSamples(); ++sample)
+                {
+                    outputStream.writeFloat(mainbuffer->getSample(channel, sample));
+                }
+            }
+        }
+    }
+}
+
+
+void ImagineAudioProcessor::loadFileSound(const juce::File& file)
+{
+    if (file.existsAsFile())
+    {
+            juce::FileInputStream inputStream(file);
+
+            if (inputStream.openedOk())
+            {
+                int sampleRate = inputStream.readInt();
+                int numChannels = inputStream.readInt();
+
+                int numSamples = (inputStream.getTotalLength() - inputStream.getPosition()) / (numChannels * sizeof(float));
+                juce::AudioBuffer<float> buffer(numChannels, numSamples);
+
+                for (int channel = 0; channel < numChannels; ++channel)
+                {
+                    for (int sample = 0; sample < numSamples; ++sample)
+                    {
+                        buffer.setSample(channel, sample, inputStream.readFloat());
+                    }
+                }
+
+                juce::File tempWavFile = juce::File::getSpecialLocation(juce::File::SpecialLocationType::tempDirectory).getChildFile("temp.wav");
+                tempWavFile.deleteFile();
+                juce::WavAudioFormat wavFormat;
+                std::unique_ptr<juce::FileOutputStream> tempOutputStream(tempWavFile.createOutputStream());
+                std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(tempOutputStream.get(),
+                    sampleRate,
+                    numChannels,
+                    24,   
+                    {}, 0));
+
+                if (writer != nullptr)
+                {
+                    writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
+                    writer->flush();
+                    tempOutputStream->flush();
+                    tempOutputStream.release();
+                }
+
+
+                std::unique_ptr<juce::AudioFormatReader> reader(mFormatManager.createReaderFor(tempWavFile));
+
+                if (reader != nullptr)
+                {
+                    mainbuffer->setSize(reader->numChannels, reader->lengthInSamples);
+                    reader->read(mainbuffer.get(), 0, reader->lengthInSamples, 0, true, true);
+
+                    juce::BigInteger range;
+                    range.setRange(0, 128, true);
+                    mSampler.clearSounds();
+                    mSampler.addSound(new juce::SamplerSound("Sample", *reader, range, 60, 0.1, 0.1, 10));
+                }
+            }
+        
+        
     }
 }
 
