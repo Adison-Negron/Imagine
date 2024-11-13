@@ -14,6 +14,7 @@
 #include <filesystem>
 #include "SliderWindow.h"
 
+
 namespace fs = std::filesystem;
 class SliderWindow;
 //==============================================================================
@@ -90,14 +91,24 @@ public:
     juce::Label freqfilterlbl;
     juce::Label qfilterlbl;
 
+    //Envelope
+    //========================================
+    juce::Slider attackSlider;
+    juce::Slider decaySlider;
+    juce::Slider sustainSlider;
+    juce::Slider releaseSlider;
 
-
+    juce::Label attacklabel;
+    juce::Label decaylabel;
+    juce::Label sustainlabel;
+    juce::Label releaselabel;
 
     int findtoggledfilter();
     void untoggleOtherFilters(int selectedFilter);
     int findfilternum();
     void onFilterToggled(juce::Button* toggledButton);
-
+    void initializeSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText,
+        float minValue, float maxValue, float defaultValue, float interval);
     void updatefilters();
     //------------------------------------------------------------//
     //live view
