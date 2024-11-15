@@ -484,25 +484,44 @@ void ImagineAudioProcessor::saveSound(const juce::File& file)
 {
     if (file.hasFileExtension("imag"))
     {
-        // Custom .imag format
-        juce::FileOutputStream outputStream(file);
-
-        if (outputStream.openedOk())
+        std::unique_ptr<juce::XmlElement> rootElement = juce::XmlDocument::parse(file);
+        if (rootElement == nullptr)
         {
-            int sampleRate = getSampleRate(); 
-            int numChannels = mainbuffer->getNumChannels(); 
+            rootElement = std::make_unique<juce::XmlElement>("Root");
+        }
 
-            outputStream.writeInt(sampleRate);
-            outputStream.writeInt(numChannels);
+        // Remove existing Audio Data if present
+        if (auto* existingAudioData = rootElement->getChildByName("AudioData"))
+        {
+            rootElement->removeChildElement(existingAudioData, true);
+        }
 
-            // Write the raw audio data
-            for (int channel = 0; channel < numChannels; ++channel)
+        juce::XmlElement* audioData = new juce::XmlElement("AudioData");
+        int sampleRate = getSampleRate();
+        int numChannels = mainbuffer->getNumChannels();
+        int numSamples = mainbuffer->getNumSamples();
+        audioData->setAttribute("SampleRate", sampleRate);
+        audioData->setAttribute("NumChannels", numChannels);
+        juce::MemoryOutputStream memoryStream;
+
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            for (int sample = 0; sample < numSamples; ++sample)
             {
-                for (int sample = 0; sample < mainbuffer->getNumSamples(); ++sample)
-                {
-                    outputStream.writeFloat(mainbuffer->getSample(channel, sample));
-                }
+                memoryStream.writeFloat(mainbuffer->getSample(channel, sample));
             }
+        }
+        juce::String base64Audio = juce::Base64::toBase64(memoryStream.getData(), memoryStream.getDataSize());
+
+        audioData->setAttribute("AudioData", base64Audio);
+
+        rootElement->addChildElement(audioData);
+
+        if (!rootElement->writeToFile(file, {}))
+        {
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                "Save Error",
+                "Could not save parameters to file.");
         }
     }
 }
@@ -512,21 +531,36 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
 {
     if (file.existsAsFile())
     {
-            juce::FileInputStream inputStream(file);
+        juce::XmlDocument doc(file);
+        std::unique_ptr<juce::XmlElement> rootElement(doc.getDocumentElement());
 
-            if (inputStream.openedOk())
+        if (rootElement == nullptr || !rootElement->hasTagName("Root"))
+        {
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                "Load Error",
+                "Could not load audio data from file.");
+            return;
+        }
+
+        auto* audioData = rootElement->getChildByName("AudioData");
+        if (audioData != nullptr)
+        {
+            int sampleRate = audioData->getIntAttribute("SampleRate", 44100);
+            int numChannels = audioData->getIntAttribute("NumChannels", 2);
+            juce::String base64Audio = audioData->getStringAttribute("AudioData");
+
+            juce::MemoryOutputStream decodedAudioStream;
+            if (juce::Base64::convertFromBase64(decodedAudioStream, base64Audio))
             {
-                int sampleRate = inputStream.readInt();
-                int numChannels = inputStream.readInt();
-
-                int numSamples = (inputStream.getTotalLength() - inputStream.getPosition()) / (numChannels * sizeof(float));
+                juce::MemoryInputStream memoryStream(decodedAudioStream.getData(), decodedAudioStream.getDataSize(), false);
+                int numSamples = memoryStream.getDataSize() / (numChannels * sizeof(float));
                 juce::AudioBuffer<float> buffer(numChannels, numSamples);
 
                 for (int channel = 0; channel < numChannels; ++channel)
                 {
                     for (int sample = 0; sample < numSamples; ++sample)
                     {
-                        buffer.setSample(channel, sample, inputStream.readFloat());
+                        buffer.setSample(channel, sample, memoryStream.readFloat());
                     }
                 }
 
@@ -537,7 +571,7 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
                 std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(tempOutputStream.get(),
                     sampleRate,
                     numChannels,
-                    24,   
+                    24,  
                     {}, 0));
 
                 if (writer != nullptr)
@@ -548,9 +582,7 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
                     tempOutputStream.release();
                 }
 
-
                 std::unique_ptr<juce::AudioFormatReader> reader(mFormatManager.createReaderFor(tempWavFile));
-
                 if (reader != nullptr)
                 {
                     mainbuffer->setSize(reader->numChannels, reader->lengthInSamples);
@@ -562,10 +594,10 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
                     mSampler.addSound(new juce::SamplerSound("Sample", *reader, range, 60, 0.1, 0.1, 10));
                 }
             }
-        
-        
+        }
     }
 }
+
 void ImagineAudioProcessor::setFilter(int filterIndex, std::string type, int frequency, float qFactor)
 {
     auto newCoefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(getSampleRate(), frequency, qFactor);

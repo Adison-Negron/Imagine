@@ -85,21 +85,35 @@ SliderWindow::~SliderWindow()
 
 void SliderWindow::saveParameters(const juce::File& file)
 {
-    juce::XmlElement parameters("Parameters");
-    parameters.setAttribute("Kernel", kernel.getValue());
-    parameters.setAttribute("Step", step.getValue());
-    parameters.setAttribute("SoundLevel", sound_level.getValue());
-    parameters.setAttribute("SoundDuration", sound_duration.getValue());
-    parameters.setAttribute("ModulationIntensity", modulation_intensity.getValue());
-    parameters.setAttribute("ModulationEnvelopeIntensity", modulation_envelope_intensity.getValue());
-    parameters.setAttribute("ModulationDuration", modulation_duration.getValue());
-    parameters.setAttribute("LfoScalarFreq", lfo_scalar_freq.getValue());
-    parameters.setAttribute("LfoScalarAmplitude", lfo_scalar_amplitude.getValue());
-    parameters.setAttribute("LfoIntensity", lfo_intensity.getValue());
-    parameters.setAttribute("OvertoneNumScalar", overtone_num_scalar.getValue());
-    parameters.setAttribute("LfoAmountScalar", lfo_amount_scalar.getValue());
+    std::unique_ptr<juce::XmlElement> rootElement = juce::XmlDocument::parse(file);
+    if (rootElement == nullptr)
+    {
+        rootElement = std::make_unique<juce::XmlElement>("Root");
+    }
 
-    if (!parameters.writeToFile(file, {}))
+    // Remove existing Parameters if present
+    if (auto* existingParameters = rootElement->getChildByName("Parameters"))
+    {
+        rootElement->removeChildElement(existingParameters, true);
+    }
+
+    juce::XmlElement* parameters = new juce::XmlElement("Parameters");
+    parameters->setAttribute("Kernel", kernel.getValue());
+    parameters->setAttribute("Step", step.getValue());
+    parameters->setAttribute("SoundLevel", sound_level.getValue());
+    parameters->setAttribute("SoundDuration", sound_duration.getValue());
+    parameters->setAttribute("ModulationIntensity", modulation_intensity.getValue());
+    parameters->setAttribute("ModulationEnvelopeIntensity", modulation_envelope_intensity.getValue());
+    parameters->setAttribute("ModulationDuration", modulation_duration.getValue());
+    parameters->setAttribute("LfoScalarFreq", lfo_scalar_freq.getValue());
+    parameters->setAttribute("LfoScalarAmplitude", lfo_scalar_amplitude.getValue());
+    parameters->setAttribute("LfoIntensity", lfo_intensity.getValue());
+    parameters->setAttribute("OvertoneNumScalar", overtone_num_scalar.getValue());
+    parameters->setAttribute("LfoAmountScalar", lfo_amount_scalar.getValue());
+
+    rootElement->addChildElement(parameters);
+
+    if (!rootElement->writeToFile(file, {}))
     {
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
             "Save Error",
@@ -110,15 +124,16 @@ void SliderWindow::saveParameters(const juce::File& file)
 void SliderWindow::loadParameters(const juce::File& file)
 {
     juce::XmlDocument doc(file);
-    std::unique_ptr<juce::XmlElement> parameters(doc.getDocumentElement());
+    std::unique_ptr<juce::XmlElement> rootElement(doc.getDocumentElement());
 
-    if (parameters == nullptr || !parameters->hasTagName("Parameters"))
+    if (rootElement == nullptr || !rootElement->hasTagName("Root"))
     {
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
             "Load Error",
             "Could not load parameters from file.");
         return;
     }
+    auto* parameters = rootElement->getChildByName("Parameters");
 
     kernel.setValue(parameters->getDoubleAttribute("Kernel", kernel.getValue()));
     step.setValue(parameters->getDoubleAttribute("Step", step.getValue()));
