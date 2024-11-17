@@ -267,10 +267,55 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     reverbWidthLabel.attachToComponent(&reverbWidth, false);
     addAndMakeVisible(reverbWidth);
 
+    delayTime.setSliderStyle(juce::Slider::Rotary);
+    delayTime.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    delayTime.setColour(juce::Slider::backgroundColourId, charcoal);
+    delayTime.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    delayTime.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    delayTime.setRange(0.0f, 2.0, 0.01);
+    delayTime.setValue(audioProcessor.delayTime->get());
+    delayTime.onValueChange = [this] { audioProcessor.delayTime->setValueNotifyingHost((float)delayTime.getValue()); };
+    delayTime.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    delayTimeLabel.setText("Time", juce::dontSendNotification);
+    delayTimeLabel.setJustificationType(juce::Justification::centred);
+    delayTimeLabel.attachToComponent(&delayTime, false);
+    addAndMakeVisible(delayTime);
+
+    delayFeedback.setSliderStyle(juce::Slider::Rotary);
+    delayFeedback.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    delayFeedback.setColour(juce::Slider::backgroundColourId, charcoal);
+    delayFeedback.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    delayFeedback.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    delayFeedback.setRange(0.0f, 2.0, 0.01);
+    delayFeedback.setValue(audioProcessor.feedback->get());
+    delayFeedback.onValueChange = [this] { audioProcessor.feedback->setValueNotifyingHost((float)delayFeedback.getValue()); };
+    delayFeedback.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    delayFeedbackLabel.setText("Feedback", juce::dontSendNotification);
+    delayFeedbackLabel.setJustificationType(juce::Justification::centred);
+    delayFeedbackLabel.attachToComponent(&delayFeedback, false);
+    addAndMakeVisible(delayFeedback);
+
+    delayMix.setSliderStyle(juce::Slider::Rotary);
+    delayMix.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
+    delayMix.setColour(juce::Slider::backgroundColourId, charcoal);
+    delayMix.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
+    delayMix.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
+    delayMix.setRange(0.0f, 1.0f, 0.01);
+    delayMix.setValue(audioProcessor.feedback->get());
+    delayMix.onValueChange = [this] { audioProcessor.mix->setValueNotifyingHost((float)delayMix.getValue()); };
+    delayMix.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
+    delayMixLabel.setText("Mix", juce::dontSendNotification);
+    delayMixLabel.setJustificationType(juce::Justification::centred);
+    delayMixLabel.attachToComponent(&delayMix, false);
+    addAndMakeVisible(delayMix);
+
     reverbEnabled.onClick = [this] { audioProcessor.reverbEnabled->setValueNotifyingHost(reverbEnabled.getToggleState()); };
     reverbEnabled.setButtonText("Enable");
     addAndMakeVisible(reverbEnabled);
 
+    delayEnabled.onClick = [this] { audioProcessor.delayEnabled->setValueNotifyingHost(delayEnabled.getToggleState());  };
+    delayEnabled.setButtonText("Enable");
+    addAndMakeVisible(delayEnabled);
 
     saveButton.setButtonText("Save");
     saveButton.addListener(this);
@@ -282,6 +327,11 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
 
     reverb.setText("Reverb");
     addAndMakeVisible(reverb);
+
+    delay.setText("Delay");
+    addAndMakeVisible(delay);
+
+
 
 }
 
@@ -744,6 +794,18 @@ void ImagineAudioProcessorEditor::resized()
     int buttonHeight = 30;
     saveButton.setBounds(0, bottomBounds.getY()-35, 60, buttonHeight);
     loadButton.setBounds(70, bottomBounds.getY()-35, 60, buttonHeight);
+
+    int dsliderWidth = 130;
+    int dsliderHeight = 100;
+    int delayGroupX = bottomBounds.getCentreX() + 60;
+    int delayGroupY = bottomBounds.getY() + 5;
+    int dsliderY = delayGroupY + 30;
+    int dmarginX = 80;
+    delay.setBounds(delayGroupX - 5, delayGroupY, 280, 210);
+    delayEnabled.setBounds(delayGroupX + 25, delayGroupY, 80, 80);
+    delayTime.setBounds(delayGroupX, dsliderY + 70, dsliderWidth, dsliderHeight);
+    delayFeedback.setBounds((delayGroupX + dmarginX), dsliderY + 70, dsliderWidth, dsliderHeight);
+    delayMix.setBounds((delayGroupX + (dmarginX * 2)), dsliderY + 70, dsliderWidth, dsliderHeight);
 
 }
 

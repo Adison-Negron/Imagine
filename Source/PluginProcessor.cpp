@@ -61,6 +61,11 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(reverbDry = new juce::AudioParameterFloat("reverbDry", "Reverb Dry", 0.0f, 1.0f, 0.4f));
     addParameter(reverbWidth = new juce::AudioParameterFloat("reverbWidth", "Reverb Width", 0.0f, 1.0f, 1.0f));
     addParameter(reverbEnabled = new juce::AudioParameterBool("reverbEnabled", "Reverb Enabled", false));
+
+    addParameter(delayTime = new juce::AudioParameterFloat("delayTime", "Delay Time", 0.0f, 2.0f, 0.5f));
+    addParameter(feedback = new juce::AudioParameterFloat("feedback", "Feedback", 0.0f, 1.0f, 0.5f));
+    addParameter(mix = new juce::AudioParameterFloat("mix", "Mix", 0.0f, 1.0f, 0.5f));
+    addParameter(delayEnabled = new juce::AudioParameterBool("delayEnabled", "Delay Enabled", false));
 }
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
@@ -156,6 +161,10 @@ void ImagineAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     adsrParams.release = 0.0f;
     adsr.setParameters(adsrParams);
     adsr.reset();
+
+    delayLine.reset();
+    delayLine.prepare(spec);
+    delayLine.setMaximumDelayInSamples((int)(2.0 * sampleRate));
 }
 
 void ImagineAudioProcessor::releaseResources()
@@ -218,6 +227,33 @@ void ImagineAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce:
     gain.setGainLinear(currentGain);
     juce::dsp::AudioBlock<float> block(buffer);
     gain.process(juce::dsp::ProcessContextReplacing<float>(block));
+
+
+    if (delayEnabled->get())
+    {
+        const int numSamples = buffer.getNumSamples();
+        const int numChannels = buffer.getNumChannels();
+        const int delayInSample = (int)(delayTime->get() * getSampleRate());
+
+        delayLine.setDelay(delayInSample);
+
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            float* channelData = buffer.getWritePointer(channel);
+            juce::dsp::AudioBlock<float> block(buffer);
+            juce::dsp::ProcessContextReplacing<float> context(block);
+
+            auto delaySample = delayLine.popSample(channel);
+            delayLine.pushSample(channel, channelData[0] + feedback->get() * delaySample);
+            for (int i = 0; i < numSamples; ++i)
+            {
+                float delayedSample = delayLine.popSample(channel);
+                delayLine.pushSample(channel, channelData[i] + feedback->get() * delayedSample);
+                channelData[i] = channelData[i] * (1.0f - mix->get()) + delayedSample * mix->get();
+            }
+        }
+    }
+
 
     // Apply reverb if enabled
     if (reverbEnabled->get())
@@ -490,7 +526,6 @@ void ImagineAudioProcessor::saveSound(const juce::File& file)
             rootElement = std::make_unique<juce::XmlElement>("Root");
         }
 
-        // Remove existing Audio Data if present
         if (auto* existingAudioData = rootElement->getChildByName("AudioData"))
         {
             rootElement->removeChildElement(existingAudioData, true);

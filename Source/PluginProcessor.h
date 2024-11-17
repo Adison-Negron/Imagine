@@ -144,6 +144,14 @@ public:
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
 
+    int writePosition;
+    juce::AudioParameterFloat* delayTime;
+    juce::AudioParameterFloat* feedback;
+    juce::AudioParameterFloat* mix;
+    juce::AudioParameterBool* delayEnabled;
+    juce::AudioBuffer<float> delayBuffer;
+    juce::dsp::DelayLine<float> delayLine;
+
     
 
 

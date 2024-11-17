@@ -188,6 +188,10 @@ public:
     juce::ToggleButton reverbEnabled;
     juce::GroupComponent reverb;
 
+    juce::Slider delayTime, delayFeedback, delayMix;
+    juce::Label delayTimeLabel, delayFeedbackLabel, delayMixLabel;
+    juce::ToggleButton delayEnabled;
+    juce::GroupComponent delay;
 
 
     juce::TextButton saveButton;
