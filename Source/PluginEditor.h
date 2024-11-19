@@ -30,7 +30,7 @@ class SliderWindow;
 
 
 
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer
+class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer, private juce::ComboBox::Listener
 {
 public:
 
@@ -110,6 +110,7 @@ public:
     void initializeSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText,
         float minValue, float maxValue, float defaultValue, float interval);
     void updatefilters();
+    void comboBoxChanged(juce::ComboBox* comboBox);
     //------------------------------------------------------------//
     //live view
 
@@ -192,7 +193,7 @@ public:
     juce::Label delayTimeLabel, delayFeedbackLabel, delayMixLabel;
     juce::ToggleButton delayEnabled;
     juce::GroupComponent delay;
-
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainSAttachment;
 
     juce::TextButton saveButton;
     juce::TextButton loadButton; 

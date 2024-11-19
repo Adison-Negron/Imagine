@@ -64,8 +64,9 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
 
 
 
-    gainSlider.setRange(0.0, 10.0, 0.05);  // Set range from 0 (mute) to 1 (full gain)
-    gainSlider.setValue(1);             // Default gain value
+    gainSlider.setRange(0.0f, 10.0f, 0.05f);  // Set range from 0 (mute) to 1 (full gain)
+    gainSlider.setValue(audioProcessor.gainS->get());
+    gainSlider.onValueChange = [this] { audioProcessor.gainS->setValueNotifyingHost((float)gainSlider.getValue() / 10.0f); };
     gainSlider.addListener(this);         // Make this editor a listener
     addAndMakeVisible(gainSlider);
 
@@ -80,8 +81,13 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     gainLabel.setText("Gain", juce::dontSendNotification);
     gainSlider.setSliderStyle(juce::Slider::Rotary);
 
+    DBG("Constructor Gain Slider is " + std::to_string(gainSlider.getValue()));
+    DBG("Constructor Gain in Processor is " + std::to_string(audioProcessor.gainS->get()));
 
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow,false,100,40);
+
+
+
 
 
     gainLabel.attachToComponent(&gainSlider, false);
@@ -111,17 +117,33 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     initializeSlider(sustainSlider, sustainlabel, "Sustain", 0.0f, 1.0f, 1.0f, 0.01f);
     initializeSlider(releaseSlider, releaselabel, "Release", 0.1f, 5.0f, 0.0f, 0.01f);
 
+    attackSlider.setValue(audioProcessor.attack->get());
+    attackSlider.onValueChange = [this] { audioProcessor.attack->setValueNotifyingHost((float)attackSlider.getValue() / 5.0f); };
+    
+    decaySlider.setValue(audioProcessor.decay->get());
+    decaySlider.onValueChange = [this] { audioProcessor.decay->setValueNotifyingHost((float)decaySlider.getValue() / 5.0f); };
+  
+    sustainSlider.setValue(audioProcessor.sustain->get());
+    sustainSlider.onValueChange = [this] { audioProcessor.sustain->setValueNotifyingHost((float)sustainSlider.getValue()); };
+
+    releaseSlider.setValue(audioProcessor.release->get());
+    releaseSlider.onValueChange = [this] { audioProcessor.release->setValueNotifyingHost((float)releaseSlider.getValue() / 5.0f); };
+   
 
 
     audioProcessor.waveviewer.setColours(gunmetal, juce::Colours::whitesmoke.withAlpha(0.5f));
 
 
-    filter1.onClick = [this]() { onFilterToggled(&filter1); };
-    filter2.onClick = [this]() { onFilterToggled(&filter2); };
-    filter3.onClick = [this]() { onFilterToggled(&filter3); };
-    filter4.onClick = [this]() { onFilterToggled(&filter4); };
+    filter1.onClick = [this]() { audioProcessor.filterOne->setValueNotifyingHost(filter1.getToggleState()); onFilterToggled(&filter1);};
+    filter1.setToggleState(audioProcessor.filterOne->get(), juce::dontSendNotification);
+    filter2.onClick = [this]() { audioProcessor.filterTwo->setValueNotifyingHost(filter2.getToggleState()); onFilterToggled(&filter2);};
+    filter2.setToggleState(audioProcessor.filterTwo->get(), juce::dontSendNotification);
+    filter3.onClick = [this]() { audioProcessor.filterThree->setValueNotifyingHost(filter3.getToggleState()); onFilterToggled(&filter3);};
+    filter3.setToggleState(audioProcessor.filterThree->get(), juce::dontSendNotification);
+    filter4.onClick = [this]() { audioProcessor.filterFour->setValueNotifyingHost(filter4.getToggleState()); onFilterToggled(&filter4);};
+    filter4.setToggleState(audioProcessor.filterFour->get(), juce::dontSendNotification);
 
-    filter1.setToggleState(true,juce::dontSendNotification);
+    //filter1.setToggleState(true,juce::dontSendNotification);
 
 
 
@@ -130,7 +152,9 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     curfiltertype_combobox.addItem("HighPass", 2);
     curfiltertype_combobox.addItem("BandPass", 3);
     curfiltertype_combobox.addItem("Notch", 4);
-    curfiltertype_combobox.setText("LowPass");
+    curfiltertype_combobox.setText(audioProcessor.filterType->getCurrentValueAsText());
+    curfiltertype_combobox.addListener(this);
+    
 
     curfilterfreq.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
     curfilterfreq.setColour(juce::Slider::backgroundColourId, charcoal);
@@ -140,6 +164,8 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     freqfilterlbl.setText("Frequency", juce::dontSendNotification);
     curfilterfreq.setSliderStyle(juce::Slider::Rotary);
     curfilterfreq.setRange(20, 5000, 5);
+    curfilterfreq.setValue(audioProcessor.filterFreq->get());
+    curfilterfreq.onValueChange = [this] { audioProcessor.filterFreq->setValueNotifyingHost(curfilterfreq.getValue() / 5000.0f); };
     curfilterfreq.addListener(this);
 
     cur_q_val.setColour(juce::Slider::thumbColourId, juce::Colours::whitesmoke);
@@ -150,6 +176,8 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     qfilterlbl.setText("Q", juce::dontSendNotification);
     cur_q_val.setSliderStyle(juce::Slider::Rotary);
     cur_q_val.setRange(.1, 5, .1);
+    cur_q_val.setValue(audioProcessor.filterQ->get());
+    cur_q_val.onValueChange = [this] { audioProcessor.filterQ->setValueNotifyingHost((float)cur_q_val.getValue() / 5.0f); };
     cur_q_val.addListener(this);
 
 
@@ -274,7 +302,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     delayTime.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
     delayTime.setRange(0.0f, 2.0, 0.01);
     delayTime.setValue(audioProcessor.delayTime->get());
-    delayTime.onValueChange = [this] { audioProcessor.delayTime->setValueNotifyingHost((float)delayTime.getValue()); };
+    delayTime.onValueChange = [this] { audioProcessor.delayTime->setValueNotifyingHost((float)delayTime.getValue() / 2.0f); };
     delayTime.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
     delayTimeLabel.setText("Time", juce::dontSendNotification);
     delayTimeLabel.setJustificationType(juce::Justification::centred);
@@ -288,7 +316,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     delayFeedback.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
     delayFeedback.setRange(0.0f, 2.0, 0.01);
     delayFeedback.setValue(audioProcessor.feedback->get());
-    delayFeedback.onValueChange = [this] { audioProcessor.feedback->setValueNotifyingHost((float)delayFeedback.getValue()); };
+    delayFeedback.onValueChange = [this] { audioProcessor.feedback->setValueNotifyingHost((float)delayFeedback.getValue() / 2.0f); };
     delayFeedback.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 30, 30);
     delayFeedbackLabel.setText("Feedback", juce::dontSendNotification);
     delayFeedbackLabel.setJustificationType(juce::Justification::centred);
@@ -309,10 +337,12 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     delayMixLabel.attachToComponent(&delayMix, false);
     addAndMakeVisible(delayMix);
 
+    reverbEnabled.setToggleState(audioProcessor.reverbEnabled->get(), juce::dontSendNotification);
     reverbEnabled.onClick = [this] { audioProcessor.reverbEnabled->setValueNotifyingHost(reverbEnabled.getToggleState()); };
     reverbEnabled.setButtonText("Enable");
     addAndMakeVisible(reverbEnabled);
 
+    delayEnabled.setToggleState(audioProcessor.delayEnabled->get(), juce::dontSendNotification);
     delayEnabled.onClick = [this] { audioProcessor.delayEnabled->setValueNotifyingHost(delayEnabled.getToggleState());  };
     delayEnabled.setButtonText("Enable");
     addAndMakeVisible(delayEnabled);
@@ -332,6 +362,18 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     addAndMakeVisible(delay);
 
 
+    windowComponent->getKernelSlider().onValueChange = [this] {audioProcessor.kernel->setValueNotifyingHost(windowComponent->getKernelSlider().getValue() / 50.0f); };
+    windowComponent->getStepSlider().onValueChange = [this] {audioProcessor.stepSize->setValueNotifyingHost(windowComponent->getStepSlider().getValue() / 50.0f); };
+    windowComponent->getSoundLevelSlider().onValueChange = [this] {audioProcessor.level->setValueNotifyingHost(windowComponent->getSoundLevelSlider().getValue() / 10.0f); };
+    windowComponent->getSoundDurationSlider().onValueChange = [this] {audioProcessor.duration->setValueNotifyingHost(windowComponent->getSoundDurationSlider().getValue() / 30.0f); };
+    windowComponent->getModulationIntensitySlider().onValueChange = [this] {audioProcessor.modulationIntensity->setValueNotifyingHost(windowComponent->getModulationIntensitySlider().getValue()); };
+    windowComponent->getModulationEnvelopeIntensitySlider().onValueChange = [this] {audioProcessor.modulationEnvelopeIntensity->setValueNotifyingHost(windowComponent->getModulationEnvelopeIntensitySlider().getValue()); };
+    windowComponent->getModulationDurationSlider().onValueChange = [this] {audioProcessor.modulationDuration->setValueNotifyingHost((windowComponent->getModulationDurationSlider().getValue() + 20.0f) / 40.0f); };
+    windowComponent->getLfoScalarFreqSlider().onValueChange = [this] {audioProcessor.lfoScalarFreq->setValueNotifyingHost(windowComponent->getLfoScalarFreqSlider().getValue() / 50.0f); };
+    windowComponent->getLfoScalarAmplitudeSlider().onValueChange = [this] {audioProcessor.lfoScalarAmplitude->setValueNotifyingHost(windowComponent->getLfoScalarAmplitudeSlider().getValue()); };
+    windowComponent->getLfoIntensitySlider().onValueChange = [this] {audioProcessor.lfoIntensity->setValueNotifyingHost(windowComponent->getLfoIntensitySlider().getValue()); };
+    windowComponent->getOvertoneNumScalarSlider().onValueChange = [this] {audioProcessor.overtoneNumScalar->setValueNotifyingHost(windowComponent->getOvertoneNumScalarSlider().getValue() / 4.0f); };
+    windowComponent->getLfoAmountScalarSlider().onValueChange = [this] {audioProcessor.lfoAmountScalar->setValueNotifyingHost(windowComponent->getLfoAmountScalarSlider().getValue() / 4.0f); };
 
 }
 
@@ -342,6 +384,13 @@ ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
     deviceManager.removeAudioCallback(&audioSourcePlayer);
 }
 
+void ImagineAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
+{
+    if (comboBox == &curfiltertype_combobox)
+    {
+        audioProcessor.filterType->setValueNotifyingHost((curfiltertype_combobox.getSelectedId() - 1) / 3.0f);
+    }
+}
 
 void ImagineAudioProcessorEditor::initializeSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText,
     float minValue, float maxValue, float defaultValue, float interval)
@@ -353,7 +402,6 @@ void ImagineAudioProcessorEditor::initializeSlider(juce::Slider& slider, juce::L
     slider.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
     slider.setSliderStyle(juce::Slider::Rotary);
     slider.setRange(minValue, maxValue, interval);
-    slider.setValue(defaultValue);
     slider.addListener(this);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
     addAndMakeVisible(slider);
@@ -842,18 +890,18 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
     repaint();  // Repaint the editor to show the cleared thumbnail
     audioProcessor.mSampler.clearSounds();
 
-//Default values
-    windowComponent->getKernelSlider().setValue(25);
-    windowComponent->getStepSlider().setValue(10);
-    windowComponent->getSoundLevelSlider().setValue(1);
-    windowComponent->getSoundDurationSlider().setValue(10);
-    windowComponent->getModulationIntensitySlider().setValue(.8);
-    windowComponent->getModulationEnvelopeIntensitySlider().setValue(.2);
-    windowComponent->getModulationDurationSlider().setValue(6);
-    windowComponent->getLfoScalarFreqSlider().setValue(.5);
-    windowComponent->getLfoScalarAmplitudeSlider().setValue(1);
-    windowComponent->getOvertoneNumScalarSlider().setValue(1);
-    windowComponent->getLfoAmountScalarSlider().setValue(1);
+    windowComponent->getKernelSlider().setValue(audioProcessor.kernel->get());
+    windowComponent->getStepSlider().setValue(audioProcessor.stepSize->get());
+    windowComponent->getSoundLevelSlider().setValue(audioProcessor.level->get());
+    windowComponent->getSoundDurationSlider().setValue(audioProcessor.duration->get());
+    windowComponent->getModulationIntensitySlider().setValue(audioProcessor.modulationIntensity->get());
+    windowComponent->getModulationEnvelopeIntensitySlider().setValue(audioProcessor.modulationEnvelopeIntensity->get());
+    windowComponent->getModulationDurationSlider().setValue(audioProcessor.modulationDuration->get());
+    windowComponent->getLfoScalarFreqSlider().setValue(audioProcessor.lfoScalarFreq->get());
+    windowComponent->getLfoScalarAmplitudeSlider().setValue(audioProcessor.lfoScalarAmplitude->get());
+    windowComponent->getLfoIntensitySlider().setValue(audioProcessor.lfoIntensity->get());
+    windowComponent->getOvertoneNumScalarSlider().setValue(audioProcessor.overtoneNumScalar->get());
+    windowComponent->getLfoAmountScalarSlider().setValue(audioProcessor.lfoAmountScalar->get());
 
 
     documentsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
@@ -977,21 +1025,35 @@ void ImagineAudioProcessorEditor::untoggleOtherFilters(int selectedFilter)
         filter2.setToggleState(false, juce::dontSendNotification);
         filter3.setToggleState(false, juce::dontSendNotification);
         filter4.setToggleState(false, juce::dontSendNotification);
+        audioProcessor.filterTwo->setValueNotifyingHost(false);
+        audioProcessor.filterThree->setValueNotifyingHost(false);
+        audioProcessor.filterFour->setValueNotifyingHost(false);
+
+
         break;
     case 2:
         filter1.setToggleState(false, juce::dontSendNotification);
         filter3.setToggleState(false, juce::dontSendNotification);
         filter4.setToggleState(false, juce::dontSendNotification);
+        audioProcessor.filterOne->setValueNotifyingHost(false);
+        audioProcessor.filterThree->setValueNotifyingHost(false);
+        audioProcessor.filterFour->setValueNotifyingHost(false);
         break;
     case 3:
         filter1.setToggleState(false, juce::dontSendNotification);
         filter2.setToggleState(false, juce::dontSendNotification);
         filter4.setToggleState(false, juce::dontSendNotification);
+        audioProcessor.filterOne->setValueNotifyingHost(false);
+        audioProcessor.filterTwo->setValueNotifyingHost(false);
+        audioProcessor.filterFour->setValueNotifyingHost(false);
         break;
     case 4:
         filter1.setToggleState(false, juce::dontSendNotification);
         filter2.setToggleState(false, juce::dontSendNotification);
         filter3.setToggleState(false, juce::dontSendNotification);
+        audioProcessor.filterOne->setValueNotifyingHost(false);
+        audioProcessor.filterTwo->setValueNotifyingHost(false);
+        audioProcessor.filterThree->setValueNotifyingHost(false);
         break;
     default:
         // If no filter is selected, do nothing

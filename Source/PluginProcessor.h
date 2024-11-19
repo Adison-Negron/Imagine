@@ -114,6 +114,45 @@ public:
     //ADSR===============================
     juce::ADSR adsr;
     juce::ADSR::Parameters adsrParams;
+    juce::AudioParameterFloat* attack;
+    juce::AudioParameterFloat* decay;
+    juce::AudioParameterFloat* sustain;
+    juce::AudioParameterFloat* release;
+
+    //Delay===============================
+    int writePosition;
+    juce::AudioParameterFloat* delayTime;
+    juce::AudioParameterFloat* feedback;
+    juce::AudioParameterFloat* mix;
+    juce::AudioParameterBool* delayEnabled;
+    juce::AudioBuffer<float> delayBuffer;
+    juce::dsp::DelayLine<float> delayLine;
+
+    //Filter================================
+    juce::AudioParameterFloat* gainS;
+    juce::AudioParameterBool* filterEnabled;
+    juce::AudioParameterBool* filterOne;
+    juce::AudioParameterBool* filterTwo;
+    juce::AudioParameterBool* filterThree;
+    juce::AudioParameterBool* filterFour;
+    juce::AudioParameterInt* filterFreq;
+    juce::AudioParameterFloat* filterQ;
+    juce::AudioParameterChoice* filterType;
+
+    //Generation===========================
+    juce::AudioParameterInt* kernel;
+    juce::AudioParameterInt* stepSize;
+    juce::AudioParameterFloat* level;
+    juce::AudioParameterInt* duration;
+    juce::AudioParameterFloat* modulationIntensity;
+    juce::AudioParameterFloat* modulationEnvelopeIntensity;
+    juce::AudioParameterFloat* modulationDuration;
+    juce::AudioParameterFloat* lfoScalarFreq;
+    juce::AudioParameterFloat* lfoScalarAmplitude;
+    juce::AudioParameterFloat* lfoIntensity;
+    juce::AudioParameterFloat* overtoneNumScalar;
+    juce::AudioParameterFloat* lfoAmountScalar;
+
 
     void updateADSRParameters(float attack, float decay, float sustain, float release);
 
@@ -143,17 +182,6 @@ public:
     juce::File outputpath;
     juce::Synthesiser mSampler;
     const int mNumVoices{ 128 };
-
-    int writePosition;
-    juce::AudioParameterFloat* delayTime;
-    juce::AudioParameterFloat* feedback;
-    juce::AudioParameterFloat* mix;
-    juce::AudioParameterBool* delayEnabled;
-    juce::AudioBuffer<float> delayBuffer;
-    juce::dsp::DelayLine<float> delayLine;
-
-    
-
 
     void saveSound(const juce::File& file);
     void loadFileSound(const juce::File& file);

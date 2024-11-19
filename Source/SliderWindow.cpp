@@ -198,11 +198,11 @@ void SliderWindow::sliderValueChanged(juce::Slider* slider)
 void SliderWindow::addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double defaultValue,double interval, std::string tooltip)
 {
     slider.setRange(min, max,interval);
-    slider.setValue(defaultValue);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     slider.setColour(juce::Slider::ColourIds::rotarySliderFillColourId, juce::Colours::whitesmoke);
     slider.setTooltip(tooltip);
+    slider.addListener(this);
 
     label.setText(name, juce::dontSendNotification);
     label.attachToComponent(&slider, false); 

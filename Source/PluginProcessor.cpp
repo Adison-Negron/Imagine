@@ -63,9 +63,40 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(reverbEnabled = new juce::AudioParameterBool("reverbEnabled", "Reverb Enabled", false));
 
     addParameter(delayTime = new juce::AudioParameterFloat("delayTime", "Delay Time", 0.0f, 2.0f, 0.5f));
-    addParameter(feedback = new juce::AudioParameterFloat("feedback", "Feedback", 0.0f, 1.0f, 0.5f));
+    addParameter(feedback = new juce::AudioParameterFloat("feedback", "Feedback", 0.0f, 2.0f, 0.5f));
     addParameter(mix = new juce::AudioParameterFloat("mix", "Mix", 0.0f, 1.0f, 0.5f));
     addParameter(delayEnabled = new juce::AudioParameterBool("delayEnabled", "Delay Enabled", false));
+
+    addParameter(gainS = new juce::AudioParameterFloat("gainS", "GainS", 0.0f, 10.0f, 1.0f));
+    addParameter(filterFreq = new juce::AudioParameterInt("filterFreq", "Filter Frequency", 0, 5000, 20));
+    addParameter(filterQ = new juce::AudioParameterFloat("filterQ", "FilterQ", 0.0f, 5.0f, 0.1f));
+    addParameter(attack = new juce::AudioParameterFloat("attack", "Attack", 0.0f, 5.0f, 0.1f));
+    addParameter(decay = new juce::AudioParameterFloat("decay", "Decay", 0.0f, 5.0f, 0.1f));
+    addParameter(sustain = new juce::AudioParameterFloat("sustain", "Sustain", 0.0f, 1.0f, 1.0f));
+    addParameter(release = new juce::AudioParameterFloat("release", "Release", 0.0f, 5.0f, 1.0f));
+
+    addParameter(filterEnabled = new juce::AudioParameterBool("filterEnabled", "Filter Enabled", false));
+    addParameter(filterOne = new juce::AudioParameterBool("filterOne", "Filter One", true));
+    addParameter(filterTwo = new juce::AudioParameterBool("filterTwo", "Filter Two", false));
+    addParameter(filterThree = new juce::AudioParameterBool("filterThree", "Filter Three", false));
+    addParameter(filterFour = new juce::AudioParameterBool("filterFour", "Filter Four", false));
+
+    juce::StringArray choices = { "LowPass", "HighPass", "BandPass", "Notch" };
+    addParameter(filterType = new juce::AudioParameterChoice("filterType", "Filter Type", choices, 0));
+
+    addParameter(kernel = new juce::AudioParameterInt("kernel", "kernel", 0, 50, 25));
+    addParameter(stepSize = new juce::AudioParameterInt("stepSize", "Step Size", 0, 50, 10));
+    addParameter(level = new juce::AudioParameterFloat("level", "Level", 0, 10, 1));
+    addParameter(duration = new juce::AudioParameterInt("duration", "Duration", 0, 30, 10));
+    addParameter(modulationIntensity = new juce::AudioParameterFloat("modulationIntensity", "Modulation Intensity", 0.0f, 1.0f, 0.8f));
+    addParameter(modulationEnvelopeIntensity = new juce::AudioParameterFloat("modulationEnvelopeIntensity", "Modulation Envelope Intensity", 0.0f, 1.0f, 0.2f));
+    addParameter(modulationDuration = new juce::AudioParameterFloat("modulationDuration", "Modulation Duration", -20.0f, 20.0f, 6.0f));
+    addParameter(lfoScalarFreq = new juce::AudioParameterFloat("lfoScalarFreq", "Lfo Scalar Freq", 0.0f, 50.0f, 0.5f));
+    addParameter(lfoScalarAmplitude = new juce::AudioParameterFloat("lfoScalarAmplitude", "Lfo Scalar Amplitude", 0.0f, 1.0f, 0.6f));
+    addParameter(lfoIntensity = new juce::AudioParameterFloat("lfoIntensity", "Lfo Intensity", 0.0f, 1.0f, 0.6f));
+    addParameter(overtoneNumScalar = new juce::AudioParameterFloat("overtoneNumScalar", "Overtone Num Scalar", 0.0f, 4.0f, 1.0f));
+    addParameter(lfoAmountScalar = new juce::AudioParameterFloat("lfoAmountScalar", "Lfo Amount Scalar", 0.0f, 4.0f, 1.0f));
+
 }
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
