@@ -73,7 +73,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(attack = new juce::AudioParameterFloat("attack", "Attack", 0.0f, 5.0f, 0.1f));
     addParameter(decay = new juce::AudioParameterFloat("decay", "Decay", 0.0f, 5.0f, 0.1f));
     addParameter(sustain = new juce::AudioParameterFloat("sustain", "Sustain", 0.0f, 1.0f, 1.0f));
-    addParameter(release = new juce::AudioParameterFloat("release", "Release", 0.0f, 5.0f, 1.0f));
+    addParameter(release = new juce::AudioParameterFloat("release", "Release", 0.0f, 5.0f, 2.0f));
 
     addParameter(filterEnabled = new juce::AudioParameterBool("filterEnabled", "Filter Enabled", false));
     addParameter(filterOne = new juce::AudioParameterBool("filterOne", "Filter One", true));

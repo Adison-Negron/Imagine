@@ -13,6 +13,7 @@
 #include <string>
 #include <filesystem>
 #include "SliderWindow.h"
+#include "HelpWindow.h"
 
 
 namespace fs = std::filesystem;
@@ -82,6 +83,9 @@ public:
     float filter1q{ 0.1 }, filter2q{ 0.1 }, filter3q{ 0.1 }, filter4q{ 0.1 }, tempq{ 0.1};
 
 
+
+    //Tips button
+    juce::TextButton helpbutton;
 
     juce::ComboBox curfiltertype_combobox;
     juce::Label is_enabledlabel;
@@ -212,6 +216,7 @@ private:
     SliderWindow* windowComponent;
     std::string imagePath;
     std::unique_ptr<juce::DocumentWindow> slider_window;
+    std::unique_ptr<HelpWindow> helpWindow;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
 
 };

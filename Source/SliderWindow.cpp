@@ -5,17 +5,17 @@ SliderWindow::SliderWindow(ImagineAudioProcessorEditor* editor) : editor(editor)
 {
     setSize(400, 950);
     
-    addSlider(kernel, kernel_label, "Kernel Size", 0, 50, 25,1, "Controls variability of sound. Warning CPU intensive at high values");
-    addSlider(step, step_label, "Step Size", 0, 50, 10,1, "Controls variability of sound. Changes which parts of the image are processed");
-    addSlider(sound_level, sound_label, "Level", 0, 10, 1,.1, "Controls sound level.");
-    addSlider(sound_duration, duration_label, "Time", 0, 30, 10,1, "Controls how long the sound lasts.");
+    addSlider(kernel, kernel_label, "Kernel Size", 0, 50, 25,1, "Controls range of the sound generation algorithm. Warning CPU intensive at high values");
+    addSlider(step, step_label, "Step Size", 0, 50, 10,1, "Controls steps of the sound generation algorithm. Changes which parts of the image are processed");
+    addSlider(sound_level, sound_label, "Level", 0, 10, 1,.1, "Controls sound level, can also add distortion.");
+    addSlider(sound_duration, duration_label, "Time", 0, 30, 10,1, "Controls how long the sound lasts, can smoothen out the resultant sound.");
     addSlider(modulation_intensity, modulation_intensity_label, "Modulation Intensity", 0, 1, .8,.1, "Controls the intensity of modulation filter");
     addSlider(modulation_envelope_intensity, envelope_intensity_label, "Envelope Intensity (Falloff)", .1, 1, .2,.1, "Controls the intensity of falloff of the modulation filter");
     addSlider(modulation_duration, modulation_duration_label, "Modulation Duration (Stretch)", -20, 20, 6,.1, "Controls how long the modulation filter lasts");
     addSlider(lfo_scalar_freq, lfo_freq_label, "Lfo Frequency", 0,50, .5,.01, "Controls the frequency of lfo's.");
     addSlider(lfo_scalar_amplitude, lfo_amplitude_label, "Lfo Amplitude", 0, 1, .6,.1, "Controls the amplitude of the LFO's");
-    addSlider(lfo_intensity, lfo_intensity_label, "Lfo Intensity", 0, 1, .6,.1, "Affects overall sound level.");
-    addSlider(overtone_num_scalar, overtone_num_label, "Overtone Anmount", 0, 4, 1,.1, "Generates additive signals using the harmonic series");
+    addSlider(lfo_intensity, lfo_intensity_label, "Lfo Intensity", 0, 1, .6,.1, "Affects level of the lfo, also lowers final sound level.");
+    addSlider(overtone_num_scalar, overtone_num_label, "Overtone Anmount", 0, 4, 1,.1, "Number of additive signals to add using the harmonic series");
     addSlider(lfo_amount_scalar, lfo_amount_label, "Lfo Amount ", 0, 4, 1,.1, "Generates low frequency oscillators using the image information");
         
 

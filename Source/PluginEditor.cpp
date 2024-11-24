@@ -8,6 +8,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "HelpWindow.h"
 
 
 //==============================================================================
@@ -110,12 +111,17 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     addAndMakeVisible(freqfilterlbl);
     addAndMakeVisible(qfilterlbl);
     addAndMakeVisible(audioProcessor.waveviewer);
+    helpbutton.addListener(this);
+    addAndMakeVisible(helpbutton);
+
+
+    helpbutton.setButtonText("Help");
 
 
     initializeSlider(attackSlider, attacklabel, "Attack", 0.1f, 5.0f, 0.0f, 0.01f);
     initializeSlider(decaySlider, decaylabel, "Decay", 0.1f, 5.0f, 0.0f, 0.01f);
     initializeSlider(sustainSlider, sustainlabel, "Sustain", 0.0f, 1.0f, 1.0f, 0.01f);
-    initializeSlider(releaseSlider, releaselabel, "Release", 0.1f, 5.0f, 0.0f, 0.01f);
+    initializeSlider(releaseSlider, releaselabel, "Release", 0.1f, 5.0f, 2.0f, 0.01f);
 
     attackSlider.setValue(audioProcessor.attack->get());
     attackSlider.onValueChange = [this] { audioProcessor.attack->setValueNotifyingHost((float)attackSlider.getValue() / 5.0f); };
@@ -210,7 +216,6 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     deviceManager.initialiseWithDefaultDevices(0, 2);
     deviceManager.addAudioCallback(&audioSourcePlayer);
     audioSourcePlayer.setSource(&transportSource);
-
     slider_window = std::make_unique<juce::DocumentWindow>("Generation Parameters", juce::Colours::lightgrey, juce::DocumentWindow::closeButton | juce::DocumentWindow::minimiseButton);
     windowComponent = new SliderWindow(this);
     slider_window->setContentOwned(windowComponent, true);
@@ -382,6 +387,7 @@ ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
     stopTimer();
     audioSourcePlayer.setSource(nullptr);
     deviceManager.removeAudioCallback(&audioSourcePlayer);
+    helpbutton.removeListener(this);
 }
 
 void ImagineAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
@@ -696,6 +702,24 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
         delete chooser;
             });
     }
+    if (button == &helpbutton)
+    {
+        if (!helpWindow)
+        {
+            // Create the help window if it doesn't exist
+            helpWindow = std::make_unique<HelpWindow>("Help", *this);
+            helpWindow->setVisible(true);
+        }
+        else
+        {
+            // If the help window exists but is hidden, make it visible again
+            if (!helpWindow->isVisible())
+            {
+                helpWindow->setVisible(true);
+                helpWindow->toFront(true); // Bring it to the front
+            }
+        }
+    }
 }
 
 
@@ -815,7 +839,7 @@ void ImagineAudioProcessorEditor::resized()
     int rightcorner = getWidth()-50;
 
 
-    //=====================================================================
+    //==================================================================oncl===
     //GainSlider
     viewToggle.setBounds(50, 10, 100, 30);
     gainSlider.setBounds(rightcorner - 150, yPosition+150, 200,150);
@@ -842,6 +866,7 @@ void ImagineAudioProcessorEditor::resized()
     int buttonHeight = 30;
     saveButton.setBounds(0, bottomBounds.getY()-35, 60, buttonHeight);
     loadButton.setBounds(70, bottomBounds.getY()-35, 60, buttonHeight);
+    helpbutton.setBounds(rightcorner - 20, bottomBounds.getY() - 35, 60, buttonHeight);
 
     int dsliderWidth = 130;
     int dsliderHeight = 100;
