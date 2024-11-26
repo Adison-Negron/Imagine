@@ -380,6 +380,16 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     windowComponent->getOvertoneNumScalarSlider().onValueChange = [this] {audioProcessor.overtoneNumScalar->setValueNotifyingHost(windowComponent->getOvertoneNumScalarSlider().getValue() / 4.0f); };
     windowComponent->getLfoAmountScalarSlider().onValueChange = [this] {audioProcessor.lfoAmountScalar->setValueNotifyingHost(windowComponent->getLfoAmountScalarSlider().getValue() / 4.0f); };
 
+    juce::File generatedFile(audioProcessor.outputpath);
+    if (generatedFile.existsAsFile())
+    {
+        thumbnail.setSource(new juce::FileInputSource(generatedFile));
+        repaint(); 
+    }
+    else
+    {
+        DBG("Generated file does not exist: ");
+    }
 }
 
 ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
