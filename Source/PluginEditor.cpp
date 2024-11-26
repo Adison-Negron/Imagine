@@ -901,7 +901,7 @@ bool ImagineAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray
     // Accept only image files
     for (auto& file : files)
     {
-        if (file.endsWithIgnoreCase(".jpg") || file.endsWithIgnoreCase(".png"))
+        if (file.endsWithIgnoreCase(".jpg") || file.endsWithIgnoreCase(".png") || file.endsWithIgnoreCase("imag"))
             return true;
     }
     return false;
@@ -951,6 +951,15 @@ void ImagineAudioProcessorEditor::filesDropped(const juce::StringArray& files, i
     for (const auto& file : files)
     {
         juce::File imageFile(file);
+        if (imageFile.hasFileExtension("imag"))
+        {
+            juce::File loadFile = audioProcessor.loadFileSound(file);
+            juce::File resultFile(loadFile);
+            thumbnail.clear();
+            thumbnail.setSource(new juce::FileInputSource(resultFile));
+            repaint();
+            return;
+        }
         imagePath = imageFile.getFullPathName().toStdString();
     }
     slider_window->setVisible(true);
