@@ -80,6 +80,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     gainSlider.setColour(juce::Slider::textBoxTextColourId, juce::Colours::whitesmoke);
     gainSlider.setColour(juce::Slider::textBoxBackgroundColourId, charcoal);
     gainLabel.setText("Gain", juce::dontSendNotification);
+    gainLabel.setJustificationType(juce::Justification::centred);
     gainSlider.setSliderStyle(juce::Slider::Rotary);
 
     DBG("Constructor Gain Slider is " + std::to_string(gainSlider.getValue()));
@@ -968,7 +969,7 @@ void ImagineAudioProcessorEditor::resized()
     //==================================================================oncl===
     //GainSlider
     viewToggle.setBounds(50, 10, 100, 30);
-    gainSlider.setBounds(rightcorner - 150, yPosition + 150, 200, 150);
+    gainSlider.setBounds(rightcorner - 205, yPosition+180, 200, 150);
 
     auto bounds = getLocalBounds();
     auto topBounds = bounds.removeFromTop(bounds.getHeight() * 0.4);
