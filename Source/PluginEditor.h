@@ -95,16 +95,6 @@ public:
     juce::Label freqfilterlbl;
     juce::Label qfilterlbl;
 
-    //Presets
-    //==================================
-    juce::TimeSliceThread presetthread{ "Directory list thread" };
-    juce::WildcardFileFilter presetfilefilter{ "*.imag","","Presetfilefilter" };
-    juce::DirectoryContentsList presetfileslst{ &presetfilefilter,presetthread };
-    juce::FileListComponent presetlistbox{ presetfileslst };
-    juce::File presetdir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Imagine")
-        .getChildFile("Presets");
-
-
     //Envelope
     //========================================
     juce::Slider attackSlider;

@@ -38,12 +38,6 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     // 
     //---------------------------------------------------------//
 
-
-
-
-    presetfileslst.setDirectory(presetdir,true,true);
-    presetfileslst.setIgnoresHiddenFiles(true);
-
      // Initialize knobs
     addAndMakeVisible(paramslider1);
     paramslider1.setSliderStyle(juce::Slider::Rotary);
@@ -396,21 +390,6 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     {
         DBG("Generated file does not exist: ");
     }
-
-
-    //Check if preset folder exists :)
-    if (!presetdir.exists()) {
-        presetdir.createDirectory();
-
-    }
-    presetthread.startThread();
-
-
-    addAndMakeVisible(presetlistbox);
-    presetlistbox.setColour(juce::ListBox::backgroundColourId, charcoal);
-    presetlistbox.addMouseListener(this, true);
-
-    
 }
 
 ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
@@ -419,7 +398,6 @@ ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
     audioSourcePlayer.setSource(nullptr);
     deviceManager.removeAudioCallback(&audioSourcePlayer);
     helpbutton.removeListener(this);
-    presetthread.stopThread(1000);
 }
 
 void ImagineAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
@@ -662,24 +640,6 @@ void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 
         repaint();
         audioProcessor.onBlockChange(startPosition, endPosition);
-    }
-    if (presetlistbox.isParentOf(event.eventComponent))
-    {
-        thumbnail.clear();
-        repaint();
-        int selectedFileIndex = presetlistbox.getSelectedRow();
-        if (selectedFileIndex >= 0)
-        {
-            juce::File selectedFile = presetfileslst.getFile(selectedFileIndex);
-            if (selectedFile.getFileExtension() == ".imag")
-            {
-                // Load the selected file using the existing method
-                juce::File loadFile = audioProcessor.loadFileSound(selectedFile);
-                juce::File resultFile(loadFile);
-                thumbnail.setSource(new juce::FileInputSource(resultFile));
-                repaint();
-            }
-        }
     }
 }
 
@@ -933,7 +893,7 @@ void ImagineAudioProcessorEditor::resized()
     delayTime.setBounds(delayGroupX, dsliderY + 70, dsliderWidth, dsliderHeight);
     delayFeedback.setBounds((delayGroupX + dmarginX), dsliderY + 70, dsliderWidth, dsliderHeight);
     delayMix.setBounds((delayGroupX + (dmarginX * 2)), dsliderY + 70, dsliderWidth, dsliderHeight);
-    presetlistbox.setBounds(delayGroupX, dsliderY + 185, 280, 200);
+
 }
 
 bool ImagineAudioProcessorEditor::isInterestedInFileDrag(const juce::StringArray& files)
