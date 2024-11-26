@@ -704,6 +704,8 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
                 DBG("Loading from file: " + result.getFullPathName());
                 juce::File loadFile = audioProcessor.loadFileSound(result);
                 juce::File resultFile(loadFile);
+                startPosition = 0;
+                endPosition = audioProcessor.mainbuffer->getNumSamples();
                 thumbnail.clear();
                 thumbnail.setSource(new juce::FileInputSource(resultFile));
                 repaint();
@@ -1022,6 +1024,8 @@ void ImagineAudioProcessorEditor::generateSound()
     juce::File generatedFile(audioProcessor.outputpath);
     if (generatedFile.existsAsFile())
     {
+        startPosition = 0;
+        endPosition = audioProcessor.mainbuffer->getNumSamples();
         thumbnail.setSource(new juce::FileInputSource(generatedFile));
         repaint();  // Repaint to show the updated thumbnail
     }
