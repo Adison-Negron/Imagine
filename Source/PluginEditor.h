@@ -202,6 +202,8 @@ public:
     juce::Label reverbRoomSizeLabel, reverbDampingLabel, reverbWetLabel, reverbDryLabel, reverbWidthLabel;
     juce::ToggleButton reverbEnabled;
     juce::GroupComponent reverb;
+    juce::GroupComponent presets;
+    juce::GroupComponent filters;
 
     juce::Slider delayTime, delayFeedback, delayMix;
     juce::Label delayTimeLabel, delayFeedbackLabel, delayMixLabel;
@@ -210,7 +212,8 @@ public:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainSAttachment;
 
     juce::TextButton saveButton;
-    juce::TextButton loadButton; 
+    juce::TextButton loadButton;
+    juce::TextButton toggleWindow;
 
     void loadThumbnailAsync(const juce::File& file);
     void drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds);

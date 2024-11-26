@@ -360,11 +360,20 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     loadButton.addListener(this);
     addAndMakeVisible(&loadButton);
 
+    toggleWindow.setButtonText("Toggle Parameter Window");
+    toggleWindow.addListener(this);
+    addAndMakeVisible(&toggleWindow);
     reverb.setText("Reverb");
     addAndMakeVisible(reverb);
 
     delay.setText("Delay");
     addAndMakeVisible(delay);
+
+    presets.setText("Presets");
+    addAndMakeVisible(presets);
+
+    filters.setText("Filters");
+    addAndMakeVisible(filters);
 
 
     windowComponent->getKernelSlider().onValueChange = [this] {audioProcessor.kernel->setValueNotifyingHost(windowComponent->getKernelSlider().getValue() / 50.0f); };
@@ -817,6 +826,16 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
             }
         }
     }
+    if (button == &toggleWindow)
+    {
+        if (slider_window->isVisible())
+        {
+            slider_window->setVisible(false);
+        }
+        else {
+            slider_window->setVisible(true);
+        }
+    }
 }
 
 
@@ -894,7 +913,8 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     int envelopesectiony = filtercomboposy + 75;
 
 
-    Filterlbl.setBounds(50, filterlblpos, 100, 30);
+    //Filterlbl.setBounds(50, filterlblpos, 100, 30);
+    filters.setBounds(10, filterlblpos - 5, 400, 420);
     filter1.setBounds(50, filterbuttonpos + 50, 50, 30);
 
     filter2.setBounds(100 + filterbuttonmargin, filterbuttonpos + 50, 50, 30);
@@ -924,8 +944,10 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     presetscontentlst.refresh();
     presetlistbox.updateContent();
 
+    
     presetlistbox.setBounds(700, 520, 250, 180);
-
+    presets.toFront(true);
+    presets.setBounds(695, 500, 280, 210);
 }
 
 
@@ -971,6 +993,7 @@ void ImagineAudioProcessorEditor::resized()
     saveButton.setBounds(0, bottomBounds.getY() - 35, 60, buttonHeight);
     loadButton.setBounds(70, bottomBounds.getY() - 35, 60, buttonHeight);
     helpbutton.setBounds(rightcorner - 20, bottomBounds.getY() - 35, 60, buttonHeight);
+    toggleWindow.setBounds(rightcorner - 130, bottomBounds.getY() - 35, 100, buttonHeight);
 
     int dsliderWidth = 130;
     int dsliderHeight = 100;
