@@ -593,7 +593,7 @@ void ImagineAudioProcessor::saveSound(const juce::File& file)
 }
 
 
-void ImagineAudioProcessor::loadFileSound(const juce::File& file)
+juce::File ImagineAudioProcessor::loadFileSound(const juce::File& file)
 {
     if (file.existsAsFile())
     {
@@ -605,7 +605,7 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
             juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
                 "Load Error",
                 "Could not load audio data from file.");
-            return;
+            return file;
         }
 
         auto* audioData = rootElement->getChildByName("AudioData");
@@ -651,7 +651,7 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
                 std::unique_ptr<juce::AudioFormatReader> reader(mFormatManager.createReaderFor(tempWavFile));
                 if (reader != nullptr)
                 {
-                    mainbuffer->setSize(reader->numChannels, reader->lengthInSamples);
+                    mainbuffer = std::make_unique<juce::AudioBuffer<float>>(reader->numChannels, reader->lengthInSamples);
                     reader->read(mainbuffer.get(), 0, reader->lengthInSamples, 0, true, true);
 
                     juce::BigInteger range;
@@ -659,6 +659,7 @@ void ImagineAudioProcessor::loadFileSound(const juce::File& file)
                     mSampler.clearSounds();
                     mSampler.addSound(new juce::SamplerSound("Sample", *reader, range, 60, 0.1, 0.1, 10));
                 }
+                return tempWavFile;
             }
         }
     }

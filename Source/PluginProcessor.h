@@ -184,7 +184,7 @@ public:
     const int mNumVoices{ 128 };
 
     void saveSound(const juce::File& file);
-    void loadFileSound(const juce::File& file);
+juce::File loadFileSound(const juce::File& file);
     juce::AudioBuffer<float>* getLiveBuffer() { return liveViewBuffer.get(); }  // For live buffer view
     juce::AudioVisualiserComponent waveviewer;
 private:

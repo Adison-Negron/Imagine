@@ -702,7 +702,11 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
             if (extension == ".imag")
             {
                 DBG("Loading from file: " + result.getFullPathName());
-                audioProcessor.loadFileSound(result);
+                juce::File loadFile = audioProcessor.loadFileSound(result);
+                juce::File resultFile(loadFile);
+                thumbnail.clear();
+                thumbnail.setSource(new juce::FileInputSource(resultFile));
+                repaint();
             }
         }
         else
