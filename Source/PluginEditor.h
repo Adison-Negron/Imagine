@@ -31,7 +31,7 @@ class SliderWindow;
 
 
 
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer, private juce::ComboBox::Listener
+class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer, private juce::ComboBox::Listener, public juce::KeyListener
 {
 public:
 
@@ -128,6 +128,17 @@ public:
 
     std::string imgstate = "Imagine: Drag an image to begin";
 
+
+    //Presets=====================================================
+    juce::TimeSliceThread presetsthread{ "presetsthread" };
+    juce::WildcardFileFilter presetfilefilter{ "*.imag","","Presetfilefilter" };;
+    juce::DirectoryContentsList presetscontentlst{ &presetfilefilter,presetsthread };
+    juce::FileListComponent presetlistbox{ presetscontentlst };
+    juce::File presetdir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Imagine")
+        .getChildFile("Presets");
+
+
+
     //-----------------------------------------------------------//
 
     ImagineAudioProcessorEditor (ImagineAudioProcessor&);
@@ -170,7 +181,6 @@ public:
     juce::Rectangle<int> bounds;
     juce::Rectangle<int> topBounds;
     juce::GroupComponent generation_sliders;
-    void changeState(TransportState newState);
     TransportState state;
     void addSlider(juce::Slider& slider, juce::Label& label, const juce::String& name, double min, double max, double default);
 
@@ -205,6 +215,9 @@ public:
     void loadThumbnailAsync(const juce::File& file);
     void drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds);
     void timerCallback();
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
+
+
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.

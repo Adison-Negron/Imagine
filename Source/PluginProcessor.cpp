@@ -98,6 +98,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(lfoAmountScalar = new juce::AudioParameterFloat("lfoAmountScalar", "Lfo Amount Scalar", 0.0f, 4.0f, 1.0f));
 
 }
+    
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
     Py_Finalize();

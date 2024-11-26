@@ -390,14 +390,62 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     {
         DBG("Generated file does not exist: ");
     }
+
+    if (!presetdir.exists()) {
+        presetdir.createDirectory();
+    }
+
+    presetscontentlst.setDirectory(presetdir, true, true);
+    presetscontentlst.setIgnoresHiddenFiles(true);
+    presetsthread.startThread();
+    addAndMakeVisible(presetlistbox);
+    presetlistbox.setColour(juce::ListBox::backgroundColourId , charcoal);
+    presetlistbox.addMouseListener(this, true);
+    presetlistbox.addKeyListener(this);
+
+
 }
 
 ImagineAudioProcessorEditor::~ImagineAudioProcessorEditor()
 {
-    stopTimer();
     audioSourcePlayer.setSource(nullptr);
     deviceManager.removeAudioCallback(&audioSourcePlayer);
     helpbutton.removeListener(this);
+    presetsthread.stopThread(1000);
+}
+bool ImagineAudioProcessorEditor::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) {
+    if (key == juce::KeyPress::returnKey) {
+
+        juce::File selectedFile = presetlistbox.getSelectedFile();
+        if (selectedFile.exists()) {
+            thumbnail.clear(); // Clear the thumbnail first
+            juce::File loadFile = audioProcessor.loadFileSound(selectedFile);
+            if (loadFile.existsAsFile())
+            {
+                startPosition = 0;
+                endPosition = audioProcessor.mainbuffer->getNumSamples();
+                thumbnailCache.clear();
+                thumbnail.setSource(new juce::FileInputSource(loadFile));
+                juce::Timer::callAfterDelay(500, [this]() { repaint(); });
+            }
+            else
+            {
+                DBG("Generated file does not exist: ");
+            }
+
+            // Clear selected block if it exists
+            if (audioProcessor.selectedBlock != nullptr)
+            {
+                audioProcessor.selectedBlock->clear();
+            }
+        }
+        presetsthread.startThread();
+        repaint();
+        return 1;
+    }
+    return 0;
+
+
 }
 
 void ImagineAudioProcessorEditor::comboBoxChanged(juce::ComboBox* comboBox)
@@ -641,7 +689,39 @@ void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
         repaint();
         audioProcessor.onBlockChange(startPosition, endPosition);
     }
+
+    if (presetlistbox.isParentOf(event.eventComponent)) {
+
+        juce::File selectedFile = presetlistbox.getSelectedFile();
+        if (selectedFile.exists()) {
+            thumbnail.clear(); // Clear the thumbnail first
+            juce::File loadFile = audioProcessor.loadFileSound(selectedFile);
+            if (loadFile.existsAsFile())
+            {
+                startPosition = 0;
+                endPosition = audioProcessor.mainbuffer->getNumSamples();
+                thumbnailCache.clear();
+                thumbnail.setSource(new juce::FileInputSource(loadFile));
+                juce::Timer::callAfterDelay(500, [this]() { repaint(); });
+            }
+            else
+            {
+                DBG("Generated file does not exist: ");
+            }
+
+            // Clear selected block if it exists
+            if (audioProcessor.selectedBlock != nullptr)
+            {
+                audioProcessor.selectedBlock->clear();
+            }
+        }
+        presetsthread.startThread();
+        repaint();
+
+    }
 }
+
+
 
 void ImagineAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& event)
 {
@@ -707,8 +787,9 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
                 startPosition = 0;
                 endPosition = audioProcessor.mainbuffer->getNumSamples();
                 thumbnail.clear();
+                thumbnailCache.clear();
                 thumbnail.setSource(new juce::FileInputSource(resultFile));
-                repaint();
+                juce::Timer::callAfterDelay(500, [this]() { repaint(); });
             }
         }
         else
@@ -838,6 +919,13 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     decaySlider.setBounds(100, envelopesectiony, 140, 90);
     sustainSlider.setBounds(200, envelopesectiony , 140, 90);
     releaseSlider.setBounds(300 , envelopesectiony , 140, 90);
+
+    
+    presetscontentlst.refresh();
+    presetlistbox.updateContent();
+
+    presetlistbox.setBounds(700, 520, 250, 180);
+
 }
 
 
@@ -849,17 +937,17 @@ void ImagineAudioProcessorEditor::resized()
 
     // Calculate horizontal spacing between knobs (set to 0 for no space)
     int spacing = 0;
-    
+
     // Set yPosition to the top of the bottom region
     int yPosition = getHeight() * 1.5 / 3; // Adjust this if necessary
-    int rightcorner = getWidth()-50;
+    int rightcorner = getWidth() - 50;
 
 
     //==================================================================oncl===
     //GainSlider
     viewToggle.setBounds(50, 10, 100, 30);
-    gainSlider.setBounds(rightcorner - 150, yPosition+150, 200,150);
-    
+    gainSlider.setBounds(rightcorner - 150, yPosition + 150, 200, 150);
+
     auto bounds = getLocalBounds();
     auto topBounds = bounds.removeFromTop(bounds.getHeight() * 0.4);
     auto bottomBounds = bounds;
@@ -880,8 +968,8 @@ void ImagineAudioProcessorEditor::resized()
 
 
     int buttonHeight = 30;
-    saveButton.setBounds(0, bottomBounds.getY()-35, 60, buttonHeight);
-    loadButton.setBounds(70, bottomBounds.getY()-35, 60, buttonHeight);
+    saveButton.setBounds(0, bottomBounds.getY() - 35, 60, buttonHeight);
+    loadButton.setBounds(70, bottomBounds.getY() - 35, 60, buttonHeight);
     helpbutton.setBounds(rightcorner - 20, bottomBounds.getY() - 35, 60, buttonHeight);
 
     int dsliderWidth = 130;
@@ -895,6 +983,8 @@ void ImagineAudioProcessorEditor::resized()
     delayTime.setBounds(delayGroupX, dsliderY + 70, dsliderWidth, dsliderHeight);
     delayFeedback.setBounds((delayGroupX + dmarginX), dsliderY + 70, dsliderWidth, dsliderHeight);
     delayMix.setBounds((delayGroupX + (dmarginX * 2)), dsliderY + 70, dsliderWidth, dsliderHeight);
+
+
 
 }
 
@@ -1201,6 +1291,7 @@ void ImagineAudioProcessorEditor::loadThumbnailAsync(const juce::File& file)
             thumbnail.setSource(fileSource); // This might take some time
             juce::MessageManager::callAsync([this]() { repaint(); }); // Repaint once loaded
         });
+
 }
 
 void ImagineAudioProcessorEditor::drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds)
