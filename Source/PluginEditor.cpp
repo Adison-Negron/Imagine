@@ -833,7 +833,7 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
         {
             slider_window->setVisible(false);
         }
-        else {
+        else if (!slider_window->isVisible() && imgstate == "Path Loaded. Change parameters and Generate sound") {
             slider_window->setVisible(true);
         }
     }
