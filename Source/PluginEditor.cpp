@@ -665,7 +665,6 @@ void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
     }
     if (presetlistbox.isParentOf(event.eventComponent))
     {
-        imgstate = "Loading........";
         thumbnail.clear();
         repaint();
         int selectedFileIndex = presetlistbox.getSelectedRow();
@@ -1064,7 +1063,7 @@ void ImagineAudioProcessorEditor::generateSound()
     if (generatedFile.existsAsFile())
     {
         thumbnail.setSource(new juce::FileInputSource(generatedFile));
-        repaint();  
+        repaint();  // Repaint to show the updated thumbnail
     }
     else
     {
