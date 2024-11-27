@@ -16,12 +16,7 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     : AudioProcessorEditor (&p), audioProcessor (p), thumbnailCache(1),  // Initialize the thumbnail cache with a cache size of 5
     thumbnail(1024, formatManager, thumbnailCache)
 {   
-    juce::PluginHostType hostType;
-    if (hostType.isAbletonLive() || hostType.isFruityLoops())
-    {
-        setAlwaysOnTop(false);
-        setWantsKeyboardFocus(false);
-    }
+    
     juce::Timer::startTimer(30);  // 30 ms update interval for ~30 FPS
     setSize (1280, 720);
     state = (Stopping);
@@ -32,6 +27,16 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     viewToggle.onClick = [this]() { repaint(); }; // Repaint on toggle
     addAndMakeVisible(viewToggle);
 
+    // Optionally, add more items to mainFlexBox as needed
+    // 
+    // 
+    // 
+    // 
+    // Buttons:
+    // 
+    // 
+    // 
+    //---------------------------------------------------------//
 
      // Initialize knobs
     addAndMakeVisible(paramslider1);
@@ -501,18 +506,6 @@ void ImagineAudioProcessorEditor::addSlider(juce::Slider& slider, juce::Label& l
     addAndMakeVisible(label);
 }
 
-void ImagineAudioProcessorEditor::focusGained(juce::Component::FocusChangeType focusType)
-{
-    // Only handle direct focus gain to avoid interfering with DAW focus
-    if (focusType == juce::Component::FocusChangeType::focusChangedDirectly)
-        juce::Component::focusGained(focusType);
-}
-
-void ImagineAudioProcessorEditor::focusLost(juce::Component::FocusChangeType focusType)
-{
-    // Do not regain focus when lost; defer to DAW or other UI elements
-    giveAwayKeyboardFocus();
-}
 
 void ImagineAudioProcessorEditor::updatefilters() {
 

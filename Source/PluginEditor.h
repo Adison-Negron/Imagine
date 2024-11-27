@@ -220,8 +220,7 @@ public:
     void drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds);
     void timerCallback();
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
-    void focusLost(juce::Component::FocusChangeType focusType);
-    void focusGained(juce::Component::FocusChangeType focusType);
+
 
 private:
     // This reference is provided as a quick way for your editor to
