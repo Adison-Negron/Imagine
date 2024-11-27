@@ -964,10 +964,10 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
 
     
     presetlistbox.setBounds(700, 520, 250, 180);
-    presets.toFront(true);
+    /*presets.toFront(true);*/
     presets.setBounds(695, 500, 280, 210);
-    refreshPreset.setBounds(905, 670, 60, 30);
-    refreshPreset.toFront(true);
+    refreshPreset.setBounds(980, 670, 60, 30);
+    //refreshPreset.toFront(true);
 }
 
 
