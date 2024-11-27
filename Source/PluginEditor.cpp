@@ -440,6 +440,7 @@ bool ImagineAudioProcessorEditor::keyPressed(const juce::KeyPress& key, juce::Co
                 startPosition = 0;
                 endPosition = audioProcessor.mainbuffer->getNumSamples();
                 thumbnailCache.clear();
+                thumbnail.clear();
                 thumbnail.setSource(new juce::FileInputSource(loadFile));
                 juce::Timer::callAfterDelay(500, [this]() { repaint(); });
             }
@@ -709,13 +710,14 @@ void ImagineAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
 
         juce::File selectedFile = presetlistbox.getSelectedFile();
         if (selectedFile.exists()) {
-            thumbnail.clear(); // Clear the thumbnail first
+            
             juce::File loadFile = audioProcessor.loadFileSound(selectedFile);
             if (loadFile.existsAsFile())
             {
                 startPosition = 0;
                 endPosition = audioProcessor.mainbuffer->getNumSamples();
                 thumbnailCache.clear();
+                thumbnail.clear(); // Clear the thumbnail first
                 thumbnail.setSource(new juce::FileInputSource(loadFile));
                 juce::Timer::callAfterDelay(500, [this]() { repaint(); });
             }
@@ -1127,6 +1129,7 @@ void ImagineAudioProcessorEditor::generateSound()
 {
     // Clear the existing thumbnail and sounds
     thumbnail.clear();
+    thumbnailCache.clear();
     repaint();
     audioProcessor.mSampler.clearSounds();
 
