@@ -364,11 +364,6 @@ ImagineAudioProcessorEditor::ImagineAudioProcessorEditor (ImagineAudioProcessor&
     toggleWindow.setButtonText("Toggle Parameter Window");
     toggleWindow.addListener(this);
     addAndMakeVisible(&toggleWindow);
-
-    refreshPreset.setButtonText("Re-scan");
-    refreshPreset.addListener(this);
-    addAndMakeVisible(&refreshPreset);
-
     reverb.setText("Reverb");
     addAndMakeVisible(reverb);
 
@@ -842,11 +837,6 @@ void ImagineAudioProcessorEditor::buttonClicked(juce::Button* button)
             slider_window->setVisible(true);
         }
     }
-    if (button == &refreshPreset)
-    {
-        presetscontentlst.refresh();
-        presetlistbox.updateContent();
-    }
 }
 
 
@@ -951,14 +941,14 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     sustainSlider.setBounds(200, envelopesectiony , 140, 90);
     releaseSlider.setBounds(300 , envelopesectiony , 140, 90);
 
-   
+    
+    presetscontentlst.refresh();
+    presetlistbox.updateContent();
 
     
     presetlistbox.setBounds(700, 520, 250, 180);
     presets.toFront(true);
     presets.setBounds(695, 500, 280, 210);
-    refreshPreset.setBounds(905, 670, 60, 30);
-    refreshPreset.toFront(true);
 }
 
 

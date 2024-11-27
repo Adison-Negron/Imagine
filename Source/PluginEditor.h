@@ -214,7 +214,6 @@ public:
     juce::TextButton saveButton;
     juce::TextButton loadButton;
     juce::TextButton toggleWindow;
-    juce::TextButton refreshPreset;
 
     void loadThumbnailAsync(const juce::File& file);
     void drawLiveBuffer(juce::Graphics& g, juce::Rectangle<int> bounds);
