@@ -873,7 +873,6 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
 
     auto bounds = getLocalBounds();
     auto topBounds = bounds.removeFromTop(bounds.getHeight() * 0.4);
-
     auto bottomBounds = bounds;
 
     // Draw filled bounds with borders using the helper function
@@ -884,8 +883,7 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
     if (viewToggle.getToggleStateValue() == true) {
         // Adjust waveviewer bounds to leave space for viewToggle
         audioProcessor.waveviewer.setVisible(true);
-        juce::Rectangle<int> adjustedWaveviewerBounds = topBounds.reduced(0, viewToggle.getHeight() + 20);
-
+        juce::Rectangle<int> adjustedWaveviewerBounds = topBounds.reduced(0, viewToggle.getHeight() + 10);
         audioProcessor.waveviewer.setBounds(adjustedWaveviewerBounds);
     }
     else {
@@ -893,20 +891,15 @@ void ImagineAudioProcessorEditor::paint(juce::Graphics& g)
         if (thumbnail.getTotalLength() > 0.0)
         {
             g.setColour(juce::Colours::white);
-            int thumbnailw = topBounds.getWidth();
-            int thumbnailh = topBounds.getHeight()-5;
-            auto thumbnaildims = topBounds;
-            thumbnaildims.setHeight(thumbnailh);
-
-            thumbnail.drawChannels(g, thumbnaildims, 0.0, thumbnail.getTotalLength(), 1.0f);
+            thumbnail.drawChannels(g, topBounds, 0.0, thumbnail.getTotalLength(), 1.0f);
 
             int numSamples = static_cast<int>(audioProcessor.mainbuffer->getNumSamples());
-            float start = (static_cast<float>(startPosition) / numSamples) * thumbnaildims.getWidth();
-            float end = (static_cast<float>(endPosition) / numSamples) * thumbnaildims.getWidth();
+            float start = (static_cast<float>(startPosition) / numSamples) * topBounds.getWidth();
+            float end = (static_cast<float>(endPosition) / numSamples) * topBounds.getWidth();
 
             g.setColour(juce::Colours::red);
-            g.drawLine(thumbnaildims.getX() + start, thumbnaildims.getY(), thumbnaildims.getX() + start, thumbnaildims.getBottom());
-            g.drawLine(thumbnaildims.getX() + end, thumbnaildims.getY(), thumbnaildims.getX() + end, thumbnaildims.getBottom());
+            g.drawLine(topBounds.getX() + start, topBounds.getY(), topBounds.getX() + start, topBounds.getBottom());
+            g.drawLine(topBounds.getX() + end, topBounds.getY(), topBounds.getX() + end, topBounds.getBottom());
         }
         else
         {
