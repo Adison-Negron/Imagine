@@ -20,18 +20,18 @@ namespace fs = std::filesystem;
 class SliderWindow;
 //==============================================================================
 /**
-* 
-* 
-* 
-* 
-* 
-* 
+*
+*
+*
+*
+*
+*
 *
 */
 
 
 
-class ImagineAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer, private juce::ComboBox::Listener, public juce::KeyListener
+class ImagineAudioProcessorEditor : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Slider::Listener, public juce::MouseListener, public juce::Button::Listener, public juce::Timer, private juce::ComboBox::Listener, public juce::KeyListener
 {
 public:
 
@@ -51,7 +51,7 @@ public:
     juce::Colour quinacridoneMagenta = juce::Colour::fromRGB(153, 57, 85);  // Quinacridone magenta
     juce::Colour lavenderFloral = juce::Colour::fromRGB(164, 145, 211); // Lavender (floral)
     juce::Colour carrotOrange = juce::Colour::fromRGB(243, 146, 55);  // Carrot orange
-    
+
 
     juce::Colour topcolor = gunmetal;
     juce::Colour topbordercolor = gunmetal;
@@ -78,9 +78,9 @@ public:
     //Filters
     juce::Label Filterlbl{ "Filter" };
     juce::ToggleButton filter1{ "Filter 1" }, filter2{ "Filter 2" }, filter3{ "Filter 3" }, filter4{ "Filter 4" };
-    bool istoggled_fil1{false}, istoggled_fil2{ false }, istoggled_fil3{ false }, istoggled_fil4{ false };
-    int filter1freq{20}, filter2freq{ 20 }, filter3freq{ 20 }, filter4freq{ 20 }, tempfreq{ 20 };
-    float filter1q{ 0.1 }, filter2q{ 0.1 }, filter3q{ 0.1 }, filter4q{ 0.1 }, tempq{ 0.1};
+    bool istoggled_fil1{ false }, istoggled_fil2{ false }, istoggled_fil3{ false }, istoggled_fil4{ false };
+    int filter1freq{ 20 }, filter2freq{ 20 }, filter3freq{ 20 }, filter4freq{ 20 }, tempfreq{ 20 };
+    float filter1q{ 0.1 }, filter2q{ 0.1 }, filter3q{ 0.1 }, filter4q{ 0.1 }, tempq{ 0.1 };
 
 
 
@@ -141,18 +141,18 @@ public:
 
     //-----------------------------------------------------------//
 
-    ImagineAudioProcessorEditor (ImagineAudioProcessor&);
+    ImagineAudioProcessorEditor(ImagineAudioProcessor&);
     ~ImagineAudioProcessorEditor() override;
 
     //==============================================================================
-    void paint (juce::Graphics&) override;
+    void paint(juce::Graphics&) override;
     void resized() override;
 
     bool isInterestedInFileDrag(const juce::StringArray& files) override;
     void filesDropped(const juce::StringArray& files, int x, int y) override;
 
 
-    
+
     juce::File documentsDir;
     juce::File mainFolder;
     juce::File imgsFolder;
@@ -221,6 +221,9 @@ public:
     void timerCallback();
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
 
+    void restoreFilterState();
+    std::string getFilterType(int type);
+
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -234,7 +237,7 @@ private:
     std::string imagePath;
     std::unique_ptr<juce::DocumentWindow> slider_window;
     std::unique_ptr<HelpWindow> helpWindow;
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImagineAudioProcessorEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ImagineAudioProcessorEditor)
 
 };
 

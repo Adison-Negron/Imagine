@@ -25,7 +25,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 #endif
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
 #endif
-    ),waveviewer(1)
+    ), waveviewer(1)
 
 
 
@@ -33,7 +33,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
 
 #endif
 {
-    
+
     waveviewer.setRepaintRate(30);
     waveviewer.setBufferSize(256);
 
@@ -44,7 +44,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
         mSampler.addVoice(new juce::SamplerVoice());
 
     }
-    
+
 
 
     Py_Initialize();
@@ -81,6 +81,11 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(filterThree = new juce::AudioParameterBool("filterThree", "Filter Three", false));
     addParameter(filterFour = new juce::AudioParameterBool("filterFour", "Filter Four", false));
 
+    addParameter(isfilterOne = new juce::AudioParameterBool("isfilterOne", "isFilter One", false));
+    addParameter(isfilterTwo = new juce::AudioParameterBool("isfilterTwo", "isFilter Two", false));
+    addParameter(isfilterThree = new juce::AudioParameterBool("isfilterThree", "isFilter Three", false));
+    addParameter(isfilterFour = new juce::AudioParameterBool("isfilterFour", "isFilter Four", false));
+
     juce::StringArray choices = { "LowPass", "HighPass", "BandPass", "Notch" };
     addParameter(filterType = new juce::AudioParameterChoice("filterType", "Filter Type", choices, 0));
 
@@ -88,6 +93,22 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(stepSize = new juce::AudioParameterInt("stepSize", "Step Size", 0, 50, 10));
     addParameter(level = new juce::AudioParameterFloat("level", "Level", 0, 10, 1));
     addParameter(duration = new juce::AudioParameterInt("duration", "Duration", 0, 30, 10));
+
+    addParameter(filter1Type = new juce::AudioParameterInt("filter1Type", "Filter1 Type", 0, 4, 0));
+    addParameter(filter2Type = new juce::AudioParameterInt("filter2Type", "Filter2 Type", 0, 4, 0));
+    addParameter(filter3Type = new juce::AudioParameterInt("filter3Type", "Filter3 Type", 0, 4, 0));
+    addParameter(filter4Type = new juce::AudioParameterInt("filter4Type", "Filter4 Type", 0, 4, 0));
+
+    addParameter(filter1Freq = new juce::AudioParameterInt("filter1Freq", "Filter1 Frequency", 0, 5000, 20));
+    addParameter(filter2Freq = new juce::AudioParameterInt("filter2Freq", "Filter2 Frequency", 0, 5000, 20));
+    addParameter(filter3Freq = new juce::AudioParameterInt("filter3Freq", "Filter3 Frequency", 0, 5000, 20));
+    addParameter(filter4Freq = new juce::AudioParameterInt("filter4Freq", "Filter4 Frequency", 0, 5000, 20));
+
+    addParameter(filter1Q = new juce::AudioParameterFloat("filter1Q", "Filter1Q", 0.0f, 5.0f, 0.1f));
+    addParameter(filter2Q = new juce::AudioParameterFloat("filter2Q", "Filter2Q", 0.0f, 5.0f, 0.1f));
+    addParameter(filter3Q = new juce::AudioParameterFloat("filter3Q", "Filter3Q", 0.0f, 5.0f, 0.1f));
+    addParameter(filter4Q = new juce::AudioParameterFloat("filter4Q", "Filter4Q", 0.0f, 5.0f, 0.1f));
+
     addParameter(modulationIntensity = new juce::AudioParameterFloat("modulationIntensity", "Modulation Intensity", 0.0f, 1.0f, 0.8f));
     addParameter(modulationEnvelopeIntensity = new juce::AudioParameterFloat("modulationEnvelopeIntensity", "Modulation Envelope Intensity", 0.0f, 1.0f, 0.2f));
     addParameter(modulationDuration = new juce::AudioParameterFloat("modulationDuration", "Modulation Duration", -20.0f, 20.0f, 6.0f));
@@ -98,7 +119,7 @@ ImagineAudioProcessor::ImagineAudioProcessor()
     addParameter(lfoAmountScalar = new juce::AudioParameterFloat("lfoAmountScalar", "Lfo Amount Scalar", 0.0f, 4.0f, 1.0f));
 
 }
-    
+
 ImagineAudioProcessor::~ImagineAudioProcessor()
 {
     Py_Finalize();
@@ -113,29 +134,29 @@ const juce::String ImagineAudioProcessor::getName() const
 
 bool ImagineAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
+#if JucePlugin_WantsMidiInput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool ImagineAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
+#if JucePlugin_ProducesMidiOutput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool ImagineAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 double ImagineAudioProcessor::getTailLengthSeconds() const
@@ -146,7 +167,7 @@ double ImagineAudioProcessor::getTailLengthSeconds() const
 int ImagineAudioProcessor::getNumPrograms()
 {
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int ImagineAudioProcessor::getCurrentProgram()
@@ -154,22 +175,22 @@ int ImagineAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void ImagineAudioProcessor::setCurrentProgram (int index)
+void ImagineAudioProcessor::setCurrentProgram(int index)
 {
 }
 
-const juce::String ImagineAudioProcessor::getProgramName (int index)
+const juce::String ImagineAudioProcessor::getProgramName(int index)
 {
     return {};
 }
 
-void ImagineAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void ImagineAudioProcessor::changeProgramName(int index, const juce::String& newName)
 {
 }
 
 
 //==============================================================================
-void ImagineAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void ImagineAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     mSampler.setCurrentPlaybackSampleRate(sampleRate);
 
@@ -206,28 +227,28 @@ void ImagineAudioProcessor::releaseResources()
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool ImagineAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool ImagineAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+#if JucePlugin_IsMidiEffect
+    juce::ignoreUnused(layouts);
     return true;
-  #else
+#else
     // This is the place where you check if the layout is supported.
     // In this template code we only support mono or stereo.
     // Some plugin hosts, such as certain GarageBand versions, will only
     // load plugins that support stereo bus layouts.
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
     // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+#if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
+#endif
 
     return true;
-  #endif
+#endif
 }
 #endif
 
@@ -323,18 +344,18 @@ bool ImagineAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* ImagineAudioProcessor::createEditor()
 {
-    return new ImagineAudioProcessorEditor (*this);
+    return new ImagineAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void ImagineAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void ImagineAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
 }
 
-void ImagineAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void ImagineAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
@@ -508,9 +529,9 @@ void ImagineAudioProcessor::onBlockChange(int start, int end)
         std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(outputStream.get(),
             getSampleRate(),
             selectedBlock->getNumChannels(),
-            16,    
-            {},    
-            0));   
+            16,
+            {},
+            0));
 
         if (writer == nullptr)
         {
@@ -638,7 +659,7 @@ juce::File ImagineAudioProcessor::loadFileSound(const juce::File& file)
                 std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(tempOutputStream.get(),
                     sampleRate,
                     numChannels,
-                    24,  
+                    24,
                     {}, 0));
 
                 if (writer != nullptr)
@@ -670,17 +691,17 @@ void ImagineAudioProcessor::setFilter(int filterIndex, std::string type, int fre
 {
     auto newCoefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(getSampleRate(), frequency, qFactor);
 
-   
-    if( type == "LowPass"){
+
+    if (type == "LowPass") {
         newCoefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass(getSampleRate(), frequency, qFactor);
-        }
+    }
     else if (type == "HighPass") {
         newCoefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass(getSampleRate(), frequency, qFactor);
     }
     else if (type == "BandPass") {
         newCoefficients = juce::dsp::IIR::Coefficients<float>::makeBandPass(getSampleRate(), frequency, qFactor);
-        }
-    
+    }
+
     else if (type == "Notch") {
         newCoefficients = juce::dsp::IIR::Coefficients<float>::makeNotch(getSampleRate(), frequency, qFactor);
     }
